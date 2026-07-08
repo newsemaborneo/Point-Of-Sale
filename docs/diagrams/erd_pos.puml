@@ -1,0 +1,277 @@
+@startuml
+title POS System - ERD (Conceptual, based on migrations & domain)
+
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  * id
+  --
+  * name
+  * email
+}
+entity "roles" as roles {
+  * id
+  * name
+}
+entity "branches" as branches {
+  * id
+  * name
+}
+entity "warehouses" as warehouses {
+  * id
+  * name
+  * branch_id
+}
+
+entity "customers" as customers {
+  * id
+  * name
+}
+entity "suppliers" as suppliers {
+  * id
+  * name
+}
+
+entity "products" as products {
+  * id
+  * name
+  * sale_price
+}
+entity "product_stocks" as product_stocks {
+  * id
+  * product_id
+  * warehouse_id
+  quantity
+}
+
+entity "sales" as sales {
+  * id
+  * invoice_number
+  * customer_id (nullable)
+  * warehouse_id
+  * branch_id (nullable)
+  * user_id (cashier)
+  * cash_register_id (nullable)
+  * voucher_id (nullable)
+  subtotal
+  discount_total
+  tax_total
+  grand_total
+  paid_amount
+  change_amount
+  status
+}
+entity "sale_items" as sale_items {
+  * id
+  * sale_id
+  * product_id
+  quantity
+  price
+  subtotal
+}
+entity "payments" as payments {
+  * id
+  * sale_id
+  method
+  amount
+  reference_number (nullable)
+}
+
+entity "sale_returns" as sale_returns {
+  * id
+  * return_number
+  * sale_id
+  * user_id
+  return_date
+  reason (nullable)
+  refund_method
+  total
+}
+entity "sale_return_items" as sale_return_items {
+  * id
+  * sale_return_id
+  * product_id
+  quantity
+  price
+  subtotal
+}
+
+entity "purchase_orders" as purchase_orders {
+  * id
+  * po_number
+  * supplier_id
+  * warehouse_id
+  * user_id
+  order_date
+  expected_date (nullable)
+  status
+  total
+}
+entity "purchase_order_items" as purchase_order_items {
+  * id
+  * purchase_order_id
+  * product_id
+  quantity
+  price
+  subtotal
+  received_quantity
+}
+
+entity "purchases" as purchases {
+  * id
+  * invoice_number
+  * purchase_order_id (nullable)
+  * supplier_id
+  * warehouse_id
+  * user_id
+  purchase_date
+  total
+  paid_amount
+  payment_status
+}
+entity "purchase_items" as purchase_items {
+  * id
+  * purchase_id
+  * product_id
+  quantity
+  price
+  subtotal
+}
+
+entity "purchase_returns" as purchase_returns {
+  * id
+  * return_number
+  * purchase_id
+  * user_id
+  return_date
+  reason (nullable)
+  total
+}
+entity "purchase_return_items" as purchase_return_items {
+  * id
+  * purchase_return_id
+  * product_id
+  quantity
+  price
+  subtotal
+}
+
+entity "stock_movements" as stock_movements {
+  * id
+  * product_id
+  * warehouse_id
+  type
+  quantity
+  quantity_before (nullable)
+  quantity_after (nullable)
+  reference_type (nullable)
+  reference_id (nullable)
+  note (nullable)
+  user_id (nullable)
+}
+
+entity "stock_opnames" as stock_opnames {
+  * id
+  * code
+  * warehouse_id
+  * user_id
+  status
+  opname_date
+  note (nullable)
+}
+entity "stock_opname_items" as stock_opname_items {
+  * id
+  * stock_opname_id
+  * product_id
+  system_quantity
+  actual_quantity
+  difference
+  note (nullable)
+}
+
+entity "cash_registers" as cash_registers {
+  * id
+  * user_id
+  * branch_id (nullable)
+  * opening_balance
+  opened_at
+  closing_balance (nullable)
+  expected_balance (nullable)
+  difference (nullable)
+  closed_at (nullable)
+  status
+}
+entity "cash_movements" as cash_movements {
+  * id
+  * cash_register_id
+  type (in/out)
+  amount
+  category (nullable)
+  description (nullable)
+  user_id (nullable)
+}
+
+entity "vouchers" as vouchers
+entity "promotions" as promotions
+entity "supplier_debts" as supplier_debts {
+  * id
+  * supplier_id
+  * purchase_id
+  amount
+  paid_amount
+  status
+}
+entity "customer_debts" as customer_debts {
+  * id
+  * customer_id
+  * sale_id
+  amount
+  paid_amount
+  status
+}
+
+' Role relation (logical)
+roles ||--o{ users
+branches ||--o{ warehouses
+warehouses ||--o{ product_stocks
+products ||--o{ product_stocks
+
+customers ||--o{ sales
+suppliers ||--o{ purchase_orders
+suppliers ||--o{ purchases
+
+sales ||--o{ sale_items
+products ||--o{ sale_items
+sales ||--o{ payments
+sales ||--o{ sale_returns
+sale_returns ||--o{ sale_return_items
+products ||--o{ sale_return_items
+
+purchase_orders ||--o{ purchase_order_items
+purchases ||--o{ purchase_items
+purchase_orders ||--o{ purchases
+purchases ||--o{ purchase_returns
+purchase_returns ||--o{ purchase_return_items
+products ||--o{ purchase_items
+products ||--o{ purchase_return_items
+
+products ||--o{ stock_movements
+warehouses ||--o{ stock_movements
+stock_opnames ||--o{ stock_opname_items
+products ||--o{ stock_opname_items
+
+cash_registers ||--o{ cash_movements
+
+sales }o--o{ product_stocks : impacts (stock decrement/increment)
+
+' Conceptual references
+sales ..> payments : has
+sales ..> vouchers : optional
+sales ..> cash_registers : belongs to
+purchase_orders ..> purchases : leads to
+purchase_returns ..> purchases : returns against
+sale_returns ..> sales : returns against
+
+@enduml
+

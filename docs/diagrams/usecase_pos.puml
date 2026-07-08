@@ -1,0 +1,147 @@
+@startuml
+title POS System - Use Case Diagram
+
+skinparam shadowing false
+left to right direction
+
+actor "Cashier" as Cashier
+actor "Admin" as Admin
+actor "Supervisor" as Supervisor
+actor "Warehouse" as Warehouse
+
+rectangle "POS Application" {
+
+  ' Authentication & Audit
+  usecase "Login" as UC_Login
+  usecase "View Dashboard" as UC_Dashboard
+
+  ' Cash register
+  usecase "Open Cash Register (Shift)" as UC_Cash_Open
+  usecase "Close Cash Register (Shift)" as UC_Cash_Close
+  usecase "Cash In" as UC_Cash_In
+  usecase "Cash Out" as UC_Cash_Out
+
+  ' POS Transaction
+  usecase "POS Sale (Create & Store Sale + Payment)" as UC_POS_Sale
+  usecase "Search Product" as UC_Search_Product
+  usecase "Resume/Handle Held Sale" as UC_Held_Resume
+  usecase "Print/Send Receipt" as UC_Receipt
+
+  ' Sale Return
+  usecase "Sale Return (Return Items + Refund Method)" as UC_Sale_Return
+
+  ' Purchase
+  usecase "Create Purchase Order (PO - Draft)" as UC_PO_Create
+  usecase "Receive Goods (Create Purchase + Stock In)" as UC_PO_Receive
+  usecase "Purchase Invoice (View Invoice)" as UC_Purchase_Invoice
+
+  usecase "Purchase Return (Return Items + Decrease Stock)" as UC_Purchase_Return
+
+  ' Stock management
+  usecase "Stock In (Manual Adjustment + Movement)" as UC_Stock_In
+  usecase "Stock Out (Manual Adjustment + Movement)" as UC_Stock_Out
+  usecase "Transfer Stock Between Warehouses" as UC_Stock_Transfer
+  usecase "Stock Adjustment" as UC_Stock_Adjust
+  usecase "Start Stock Opname (Draft)" as UC_Opname_Start
+  usecase "Update Opname Item" as UC_Opname_Update
+  usecase "Complete Opname (Apply Differences)" as UC_Opname_Complete
+  usecase "View Stock History / Low Stock Alert" as UC_Stock_History
+
+  ' Customers/Suppliers (master data)
+  usecase "Manage Customers (CRUD + Debts)" as UC_Customers
+  usecase "Manage Suppliers (CRUD + Purchase History + Debts)" as UC_Suppliers
+
+  ' Reports
+  usecase "View Sales Report" as UC_Report_Sales
+  usecase "View Purchases Report" as UC_Report_Purchases
+  usecase "View Stock Report" as UC_Report_Stock
+  usecase "View Profit/Loss Report" as UC_Report_PL
+  usecase "View Cash Report" as UC_Report_Cash
+  usecase "View Best Selling Products" as UC_Report_Best
+  usecase "Export Sales (PDF/Excel)" as UC_Report_Export
+
+  ' Settings & Audit
+  usecase "Manage Settings (Store Hours, Logo, etc.)" as UC_Settings
+  usecase "View Audit Logs" as UC_Audit_Logs
+}
+
+' Relationships between use cases
+UC_POS_Sale .> UC_Search_Product : <<include>>
+UC_Cash_Close .> UC_POS_Sale : <<uses>>
+UC_Sale_Return .> UC_POS_Sale : <<extend>>
+UC_PO_Receive .> UC_PO_Create : <<include>>
+UC_Purchase_Return .> UC_PO_Receive : <<extend>>
+UC_Opname_Complete .> UC_Stock_Adjust : <<include>>
+
+' Actor associations (based on routes/web.php middleware)
+Cashier --> UC_Login
+Cashier --> UC_Dashboard
+Cashier --> UC_Cash_Open
+Cashier --> UC_Cash_Close
+Cashier --> UC_Cash_In
+Cashier --> UC_Cash_Out
+
+Cashier --> UC_POS_Sale
+Cashier --> UC_Held_Resume
+Cashier --> UC_Receipt
+Cashier --> UC_Sale_Return
+Cashier --> UC_Customers
+Cashier --> UC_Report_Sales
+
+Admin --> UC_Dashboard
+Admin --> UC_Cash_Open
+Admin --> UC_Cash_Close
+Admin --> UC_Cash_In
+Admin --> UC_Cash_Out
+Admin --> UC_POS_Sale
+Admin --> UC_POS_Sale
+Admin --> UC_Sale_Return
+Admin --> UC_PO_Create
+Admin --> UC_PO_Receive
+Admin --> UC_Purchase_Return
+Admin --> UC_Stock_In
+Admin --> UC_Stock_Out
+Admin --> UC_Stock_Transfer
+Admin --> UC_Stock_Adjust
+Admin --> UC_Opname_Start
+Admin --> UC_Opname_Update
+Admin --> UC_Opname_Complete
+Admin --> UC_Stock_History
+Admin --> UC_Customers
+Admin --> UC_Suppliers
+Admin --> UC_Report_Sales
+Admin --> UC_Report_Purchases
+Admin --> UC_Report_Stock
+Admin --> UC_Report_PL
+Admin --> UC_Report_Cash
+Admin --> UC_Report_Best
+Admin --> UC_Report_Export
+Admin --> UC_Settings
+Admin --> UC_Audit_Logs
+
+Supervisor --> UC_Dashboard
+Supervisor --> UC_Report_Sales
+Supervisor --> UC_Report_Purchases
+Supervisor --> UC_Report_Stock
+Supervisor --> UC_Report_PL
+Supervisor --> UC_Report_Cash
+Supervisor --> UC_Report_Best
+Supervisor --> UC_Stock_History
+
+Warehouse --> UC_Stock_In
+Warehouse --> UC_Stock_Out
+Warehouse --> UC_Stock_Transfer
+Warehouse --> UC_Stock_Adjust
+Warehouse --> UC_Opname_Start
+Warehouse --> UC_Opname_Update
+Warehouse --> UC_Opname_Complete
+Warehouse --> UC_PO_Create
+Warehouse --> UC_PO_Receive
+Warehouse --> UC_Purchase_Return
+Warehouse --> UC_Stock_History
+
+Warehouse --> UC_Suppliers
+Warehouse --> UC_Customers
+
+@enduml
+

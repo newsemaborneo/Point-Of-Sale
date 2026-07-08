@@ -1,0 +1,128 @@
+@startuml
+title POS System - LRS (Logical Responsibility / Responsibility Matrix)
+
+' This is an LRS-style responsibility matrix between Actor and Use Case.
+' Values:
+'  - R = Read/View
+'  - C = Create
+'  - U = Update
+'  - D = Delete
+'  - P = Process/Execute Business Process
+'  - X = not allowed (optional)
+
+skinparam shadowing false
+left to right direction
+
+actor "Cashier" as Cashier
+actor "Admin" as Admin
+actor "Supervisor" as Supervisor
+actor "Warehouse" as Warehouse
+
+rectangle "Use Cases" {
+  usecase "Login" as UC_Login
+  usecase "Open Cash Register (Shift)" as UC_Cash_Open
+  usecase "Close Cash Register (Shift)" as UC_Cash_Close
+
+  usecase "POS Sale" as UC_POS_Sale
+  usecase "Sale Return" as UC_Sale_Return
+  usecase "Search Product" as UC_Search_Product
+  usecase "Print/Send Receipt" as UC_Receipt
+  usecase "Manage Customers (CRUD + Debts)" as UC_Customers
+
+  usecase "Create Purchase Order (PO - Draft)" as UC_PO_Create
+  usecase "Receive Goods (Create Purchase + Stock In)" as UC_PO_Receive
+  usecase "Purchase Return" as UC_Purchase_Return
+  usecase "Manage Suppliers (CRUD + Purchase History + Debts)" as UC_Suppliers
+
+  usecase "Stock In" as UC_Stock_In
+  usecase "Stock Out" as UC_Stock_Out
+  usecase "Transfer Stock Between Warehouses" as UC_Stock_Transfer
+  usecase "Stock Adjustment" as UC_Stock_Adjust
+  usecase "Start Stock Opname (Draft)" as UC_Opname_Start
+  usecase "Update Opname Item" as UC_Opname_Update
+  usecase "Complete Opname" as UC_Opname_Complete
+  usecase "View Stock History / Low Stock Alert" as UC_Stock_History
+
+  usecase "Cash In" as UC_Cash_In
+  usecase "Cash Out" as UC_Cash_Out
+
+  usecase "Sales Report" as UC_Report_Sales
+  usecase "Purchases Report" as UC_Report_Purchases
+  usecase "Stock Report" as UC_Report_Stock
+  usecase "Profit/Loss Report" as UC_Report_PL
+  usecase "Cash Report" as UC_Report_Cash
+  usecase "Best Selling Products" as UC_Report_Best
+  usecase "Export Sales" as UC_Report_Export
+
+  usecase "Manage Settings" as UC_Settings
+  usecase "View Audit Logs" as UC_Audit_Logs
+}
+
+' Responsibility mapping (drawn as associations with stereotypes)
+' Cashier
+Cashier --> UC_Login : C/P
+Cashier --> UC_Cash_Open : C
+Cashier --> UC_Cash_Close : P
+Cashier --> UC_POS_Sale : P
+Cashier --> UC_Search_Product : R
+Cashier --> UC_Receipt : C
+Cashier --> UC_Sale_Return : P
+Cashier --> UC_Customers : R
+Cashier --> UC_Report_Sales : R
+
+' Admin
+Admin --> UC_Login : C/P
+Admin --> UC_Cash_Open : C
+Admin --> UC_Cash_Close : P
+Admin --> UC_POS_Sale : P
+Admin --> UC_Sale_Return : P
+Admin --> UC_PO_Create : C
+Admin --> UC_PO_Receive : P
+Admin --> UC_Purchase_Return : P
+Admin --> UC_Customers : C/U/D
+Admin --> UC_Suppliers : C/U/D
+Admin --> UC_Stock_In : P
+Admin --> UC_Stock_Out : P
+Admin --> UC_Stock_Transfer : P
+Admin --> UC_Stock_Adjust : P
+Admin --> UC_Opname_Start : C/P
+Admin --> UC_Opname_Update : U/P
+Admin --> UC_Opname_Complete : P
+Admin --> UC_Stock_History : R
+Admin --> UC_Cash_In : P
+Admin --> UC_Cash_Out : P
+Admin --> UC_Report_Sales : R
+Admin --> UC_Report_Purchases : R
+Admin --> UC_Report_Stock : R
+Admin --> UC_Report_PL : R
+Admin --> UC_Report_Cash : R
+Admin --> UC_Report_Best : R
+Admin --> UC_Report_Export : C/P
+Admin --> UC_Settings : U/P
+Admin --> UC_Audit_Logs : R
+
+' Supervisor
+Supervisor --> UC_Report_Sales : R
+Supervisor --> UC_Report_Purchases : R
+Supervisor --> UC_Report_Stock : R
+Supervisor --> UC_Report_PL : R
+Supervisor --> UC_Report_Cash : R
+Supervisor --> UC_Report_Best : R
+Supervisor --> UC_Stock_History : R
+
+' Warehouse
+Warehouse --> UC_Stock_In : P
+Warehouse --> UC_Stock_Out : P
+Warehouse --> UC_Stock_Transfer : P
+Warehouse --> UC_Stock_Adjust : P
+Warehouse --> UC_Opname_Start : C/P
+Warehouse --> UC_Opname_Update : U/P
+Warehouse --> UC_Opname_Complete : P
+Warehouse --> UC_Stock_History : R
+Warehouse --> UC_PO_Create : C
+Warehouse --> UC_PO_Receive : P
+Warehouse --> UC_Purchase_Return : P
+Warehouse --> UC_Suppliers : C/U/D
+
+@enduml
+

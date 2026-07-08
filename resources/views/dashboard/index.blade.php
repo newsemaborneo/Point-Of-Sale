@@ -1,0 +1,236 @@
+<x-layouts.app title="Dashboard">
+    <div class="space-y-6 sm:space-y-8 animate-fade-in-down">
+        {{-- Stat Cards --}}
+        <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {{-- Revenue Card --}}
+            <div class="relative overflow-hidden rounded-3xl border border-indigo-100 bg-white p-6 sm:p-8 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1 group">
+                <div class="absolute -right-6 -top-6 rounded-full bg-indigo-50 p-8 transition-transform group-hover:scale-125">
+                    <svg class="h-10 w-10 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div class="relative z-10">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-indigo-500">Pendapatan Hari Ini</h2>
+                    <p class="mt-4 text-3xl sm:text-4xl font-black text-slate-800 tracking-tight break-words">Rp {{ number_format($totalRevenue ?? 0, 0, ',', '.') }}</p>
+                    <p class="mt-3 flex items-center text-sm font-medium text-slate-500">
+                        <span class="mr-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" /></svg>
+                        </span>
+                        Dari penjualan hari ini
+                    </p>
+                </div>
+            </div>
+
+            {{-- Transactions Card --}}
+            <div class="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white p-6 sm:p-8 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1 group">
+                <div class="absolute -right-6 -top-6 rounded-full bg-emerald-50 p-8 transition-transform group-hover:scale-125">
+                    <svg class="h-10 w-10 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                </div>
+                <div class="relative z-10">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-emerald-500">Transaksi Hari Ini</h2>
+                    <p class="mt-4 text-3xl sm:text-4xl font-black text-slate-800 tracking-tight">{{ $totalTransactions ?? 0 }}</p>
+                    <p class="mt-3 text-sm font-medium text-slate-500">Total transaksi yang berhasil diselesaikan.</p>
+                </div>
+            </div>
+
+            {{-- Low Stock Card --}}
+            <div class="relative overflow-hidden rounded-3xl border border-rose-100 bg-white p-6 sm:p-8 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1 group sm:col-span-2 lg:col-span-1">
+                <div class="absolute -right-6 -top-6 rounded-full bg-rose-50 p-8 transition-transform group-hover:scale-125">
+                    <svg class="h-10 w-10 text-rose-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <div class="relative z-10">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-rose-500">Stok Menipis</h2>
+                    <div class="mt-4 flex items-baseline gap-2">
+                        <p class="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight">{{ isset($lowStockProducts) ? $lowStockProducts->count() : 0 }}</p>
+                        <span class="text-lg font-bold text-slate-500">Produk</span>
+                    </div>
+                    <p class="mt-3 text-sm font-medium text-slate-500">Butuh restock (di bawah batas minimum).</p>
+                </div>
+            </div>
+        </section>
+
+        {{-- Chart + Sidebar: kedua kolom dibuat flex agar tingginya saling menyesuaikan --}}
+        <section class="grid items-stretch gap-6 sm:gap-8 xl:grid-cols-[2fr_1.2fr]">
+            {{-- Sales Chart --}}
+            <div class="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6 sm:mb-8">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Ringkasan Penjualan</h2>
+                        <p class="text-sm font-medium text-slate-500 mt-1">Grafik penjualan 7 hari terakhir.</p>
+                    </div>
+                </div>
+                <div class="relative min-h-[280px] flex-1">
+                    @php
+                        $hasChartData = collect($salesChartDatasets ?? [])
+                            ->sum(fn ($ds) => array_sum($ds['data'] ?? [])) > 0;
+                    @endphp
+                    @if($hasChartData)
+                        <canvas id="salesChart" class="absolute inset-0 h-full w-full"></canvas>
+                    @else
+                        <div class="flex h-full min-h-[280px] items-center justify-center rounded-2xl border border-dashed border-slate-300">
+                            <p class="font-medium text-slate-500 text-center px-4">Belum ada data penjualan dalam 7 hari terakhir.</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-6 sm:gap-8">
+                {{-- Best Sellers --}}
+                <div class="flex flex-1 min-h-[320px] flex-col rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+                    <div class="mb-6 flex items-center justify-between">
+                        <h2 class="text-xl font-bold text-slate-800">Produk Terlaris</h2>
+                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase text-emerald-700">Top 5</span>
+                    </div>
+                    <div class="flex-1 space-y-4 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
+                        @forelse ($bestSellers ?? [] as $index => $item)
+                            <div class="group flex items-center justify-between rounded-2xl border border-slate-100 p-4 transition-all hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-md">
+                                <div class="flex items-center gap-4 min-w-0">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold {{ $index === 0 ? 'bg-amber-100 text-amber-600' : ($index === 1 ? 'bg-slate-200 text-slate-600' : ($index === 2 ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500')) }}">
+                                        #{{ $index + 1 }}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="font-bold text-slate-800 truncate">{{ $item->product->name ?? 'Produk tidak diketahui' }}</div>
+                                        <div class="text-xs font-medium text-slate-500 truncate">{{ $item->product->category->name ?? 'Kategori' }}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0 pl-3">
+                                    <div class="font-bold text-indigo-600">{{ $item->total_qty }}</div>
+                                    <div class="text-xs font-medium text-slate-500">Terjual</div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-300 p-8 text-center">
+                                <p class="font-medium text-slate-500">Belum ada data penjualan hari ini.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                {{-- Quick Actions --}}
+                <div class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+                    <h2 class="text-xl font-bold text-slate-800 mb-6">Laporan Cepat</h2>
+                    <a href="{{ route('reports.index') }}" class="group flex items-center justify-between rounded-2xl bg-indigo-50 p-4 transition-colors hover:bg-indigo-100">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="rounded-xl bg-white p-2 text-indigo-600 shadow-sm shrink-0">
+                                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 truncate">Laporan Penjualan</h3>
+                                <p class="text-xs font-medium text-slate-500">Unduh PDF/Excel</p>
+                            </div>
+                        </div>
+                        <svg class="h-5 w-5 shrink-0 text-indigo-400 transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clip-rule="evenodd" /></svg>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const canvas = document.getElementById('salesChart');
+            if (!canvas) return;
+
+            const salesCtx = canvas.getContext('2d');
+
+            // Data per cabang dikirim dari controller: [{ label, data: [...], color }, ...]
+            const branchDatasetsRaw = @json($salesChartDatasets ?? []);
+            const isMultiBranch = branchDatasetsRaw.length > 1;
+
+            const chartDatasets = branchDatasetsRaw.map(function (branch) {
+                let backgroundColor = 'transparent';
+
+                // Hanya pakai area gradient kalau cuma 1 cabang (biar tidak menumpuk saat multi-line)
+                if (!isMultiBranch) {
+                    const gradient = salesCtx.createLinearGradient(0, 0, 0, 300);
+                    const rgb = hexToRgb(branch.color);
+                    gradient.addColorStop(0, `rgba(${rgb}, 0.35)`);
+                    gradient.addColorStop(1, `rgba(${rgb}, 0)`);
+                    backgroundColor = gradient;
+                }
+
+                return {
+                    label: branch.label,
+                    data: branch.data,
+                    borderColor: branch.color,
+                    backgroundColor: backgroundColor,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: branch.color,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: !isMultiBranch,
+                    tension: 0.4,
+                };
+            });
+
+            function hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result
+                    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+                    : '99, 102, 241';
+            }
+
+            new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: @json($salesChartLabels ?? []),
+                    datasets: chartDatasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: isMultiBranch,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 10,
+                                boxHeight: 10,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { weight: '500', size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            padding: 12,
+                            cornerRadius: 12,
+                            titleFont: { weight: 'bold' },
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function (context) {
+                                    return context.dataset.label + ': Rp ' + context.parsed.y.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                callback: function (value) {
+                                    return 'Rp ' + value.toLocaleString('id-ID');
+                                },
+                                font: { weight: '500' }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { weight: '500' } }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+    @endpush
+</x-layouts.app>
