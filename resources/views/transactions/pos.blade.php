@@ -4,7 +4,7 @@
         id="pos-root"
         x-data="pos()"
         x-init="startClock(); watchFullscreen();"
-        :class="isFullscreen ? 'fixed inset-0 z-[100] bg-slate-100' : 'h-[calc(100vh-6rem)] -m-8'"
+        :class="isFullscreen ? 'fixed inset-0 z-[100] bg-slate-100' : 'h-[calc(100dvh-7.5rem)] lg:h-[calc(100dvh-6rem)] -mx-4 -mt-2 -mb-8 sm:-m-6 lg:-m-8'"
         class="flex flex-col overflow-hidden"
     >
         {{-- ============================================================ --}}
@@ -23,20 +23,30 @@
                 <span class="text-xs text-slate-400" x-text="storeHoursLabel"></span>
             </div>
 
-            {{-- Center: live clock --}}
-            <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none"
-                     viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span class="text-sm font-mono font-bold tracking-widest" x-text="currentTime"></span>
-                <span class="text-xs text-slate-400" x-text="currentDate"></span>
+            {{-- Center: live clock & Return --}}
+            <div class="hidden md:flex items-center gap-4">
+                <button @click="showReturnModal = true"
+                        class="flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white
+                               bg-rose-900/50 hover:bg-rose-700 px-3 py-1.5 rounded-lg transition-all">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                    </svg>
+                    Retur Transaksi
+                </button>
+                <div class="flex items-center gap-2 border-l border-slate-700 pl-4">
+                    <svg class="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-sm font-mono font-bold tracking-widest" x-text="currentTime"></span>
+                    <span class="text-xs text-slate-400" x-text="currentDate"></span>
+                </div>
             </div>
 
             {{-- Right: fullscreen toggle --}}
             <button @click="toggleFullscreen()"
-                    class="flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white
+                    class="hidden md:flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white
                            bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-all">
                 {{-- Enter fullscreen icon --}}
                 <template x-if="!isFullscreen">
@@ -62,7 +72,7 @@
         </div>
 
 
-        <div class="relative flex flex-1 flex-col md:flex-row overflow-hidden">
+        <div class="relative flex flex-1 flex-col lg:flex-row overflow-hidden">
 
 
         <div x-show="showOpenRegisterModal" style="display:none"
@@ -153,7 +163,7 @@
         @endif
 
 
-        <div class="flex-[2] md:flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div class="flex-1 lg:flex-1 flex flex-col min-h-0 overflow-hidden">
             <div class="bg-white border-b border-slate-200/60 shadow-sm z-10">
                 <div class="px-4 py-3">
                     <div class="relative flex-1">
@@ -167,6 +177,7 @@
                         <input type="text" x-model="searchQuery"
                                placeholder="Cari produk atau scan barcode..."
                                @keydown.f2.prevent="$el.focus()"
+                               @keydown.enter.prevent="addScannedProduct()"
                                class="block w-full pl-11 pr-4 py-2.5 bg-slate-50 border-0 text-slate-900
                                       rounded-xl ring-1 ring-inset ring-slate-200 focus:ring-2
                                       focus:ring-inset focus:ring-indigo-600 text-sm transition-all
@@ -197,7 +208,7 @@
 
             {{-- Products grid --}}
             <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50">
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
                     <template x-for="product in filteredProducts" :key="product.id">
                         <div @click="addToCart(product)"
                              class="group relative bg-white border border-slate-200 rounded-2xl
@@ -206,7 +217,7 @@
                                     duration-300 transform hover:-translate-y-1 flex flex-col
                                     select-none"
                              :class="product.stock <= 0 ? 'opacity-60 cursor-not-allowed' : ''">
-                            <div class="aspect-square bg-slate-100 overflow-hidden relative">
+                            <div class="aspect-[4/3] sm:aspect-square bg-slate-100 overflow-hidden relative">
                                 <img :src="product.photo && !product.photo.startsWith('📦')
                                             ? '/storage/' + product.photo
                                             : 'https://placehold.co/200x200/e2e8f0/94a3b8?text=Produk'"
@@ -258,8 +269,8 @@
                 </div>
             </div>
         </div>
-        <div class="flex-[1] md:flex-none w-full md:w-96 lg:w-[400px] bg-white
-                    border-t md:border-t-0 md:border-l border-slate-200/80
+        <div class="flex-none lg:flex-none w-full lg:w-[400px] bg-white
+                    border-t lg:border-t-0 lg:border-l border-slate-200/80
                     shadow-2xl flex flex-col z-20 min-h-0">
 
             {{-- Cart header --}}
@@ -290,7 +301,7 @@
             </div>
 
             {{-- Cart items --}}
-            <div class="flex-1 overflow-y-auto p-3 custom-scrollbar min-h-0">
+            <div class="flex-1 lg:flex-1 overflow-y-auto p-3 custom-scrollbar min-h-[10vh] max-h-[30vh] lg:max-h-full">
                 <template x-if="cart.length === 0">
                     <div class="flex flex-col items-center justify-center h-full
                                 text-slate-400 opacity-60 py-12">
@@ -667,13 +678,56 @@
                                        transition-colors shadow-lg shadow-emerald-500/20">
                             Transaksi Baru
                         </button>
-                        <a :href="'/transactions/' + successData.sale_id + '/receipt'"
-                           target="_blank"
-                           class="flex-1 rounded-xl border-2 border-slate-200 bg-white
-                                  px-4 py-3 text-sm font-bold text-slate-700
-                                  hover:bg-slate-50 transition-colors text-center">
+                        <button type="button"
+                                @click="printReceipt(successData.sale_id)"
+                                class="flex-1 rounded-xl border-2 border-slate-200 bg-white
+                                       px-4 py-3 text-sm font-bold text-slate-700
+                                       hover:bg-slate-50 transition-colors text-center">
                             Cetak Struk
-                        </a>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Return Modal --}}
+        <div x-show="showReturnModal" style="display:none"
+             class="fixed inset-0 z-[120] flex items-center justify-center px-4"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showReturnModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-rose-50/50">
+                    <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-rose-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                        </svg>
+                        Retur Transaksi
+                    </h3>
+                    <button @click="showReturnModal = false"
+                            class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg"
+                             viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-5">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Nomor Invoice
+                    </label>
+                    <input type="text" x-model="returnInvoiceNumber"
+                           placeholder="Contoh: INV-2026..."
+                           @keydown.enter="searchReturn"
+                           class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-rose-500 text-sm">
+                    <p x-show="returnError" class="text-xs text-rose-500 mt-2" x-text="returnError"></p>
+                    <div class="mt-5 flex gap-3">
+                        <button @click="searchReturn" :disabled="isSearchingReturn || !returnInvoiceNumber"
+                                class="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60 transition-all">
+                            <span x-show="!isSearchingReturn">Cari & Retur</span>
+                            <span x-show="isSearchingReturn">Mencari...</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -704,6 +758,10 @@
             storeHoursLabel: '',
             showCheckoutModal:    false,
             showSuccessModal:     false,
+            showReturnModal:      false,
+            returnInvoiceNumber:  '',
+            returnError:          '',
+            isSearchingReturn:    false,
             showOpenRegisterModal: {{ $cashRegister ? 'false' : 'true' }},
             isLoading:           false,
             isOpeningRegister:   false,
@@ -737,7 +795,27 @@
                 });
             },
             get subtotal() {
-                return this.cart.reduce((t, i) => t + i.price * i.quantity, 0);
+                return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            },
+
+            searchReturn() {
+                if (!this.returnInvoiceNumber) return;
+                this.isSearchingReturn = true;
+                this.returnError = '';
+                fetch(`/api/sales/by-invoice/${this.returnInvoiceNumber}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        this.isSearchingReturn = false;
+                        if (data.success && data.sale) {
+                            window.location.href = `/sales/${data.sale.id}/return/create`;
+                        } else {
+                            this.returnError = 'Invoice tidak ditemukan atau status salah.';
+                        }
+                    })
+                    .catch(err => {
+                        this.isSearchingReturn = false;
+                        this.returnError = 'Terjadi kesalahan sistem.';
+                    });
             },
             get promotionDiscountAmount() {
                 let promoDisc = 0;
@@ -875,6 +953,26 @@
                 }
                 this.updatePaidAmount();
             },
+            addScannedProduct() {
+                // If there's exactly 1 match in the filtered products, or exact match on barcode/SKU
+                if (this.searchQuery.trim() === '') return;
+
+                const query = this.searchQuery.toLowerCase();
+                const exactMatch = this.products.find(p =>
+                    (p.barcode && p.barcode.toLowerCase() === query) ||
+                    (p.sku && p.sku.toLowerCase() === query)
+                );
+
+                if (exactMatch) {
+                    this.addToCart(exactMatch);
+                    this.searchQuery = ''; // reset after scan
+                } else if (this.filteredProducts.length === 1) {
+                    this.addToCart(this.filteredProducts[0]);
+                    this.searchQuery = ''; // reset after scan
+                } else {
+                    alert('Produk tidak ditemukan atau ada lebih dari 1 hasil yang cocok. Silakan pilih manual.');
+                }
+            },
             removeFromCart(index) {
                 this.cart.splice(index, 1);
                 this.updatePaidAmount();
@@ -934,6 +1032,19 @@
                 return new Intl.NumberFormat('id-ID', {
                     style: 'currency', currency: 'IDR', minimumFractionDigits: 0
                 }).format(amount || 0);
+            },
+            printReceipt(saleId) {
+                if (!saleId) return;
+
+                const url = '/transactions/' + saleId + '/receipt';
+                const printWindow = window.open(url, '_blank', 'width=420,height=760,noopener,noreferrer');
+
+                if (!printWindow) {
+                    window.location.href = url;
+                    return;
+                }
+
+                printWindow.focus();
             },
 
             /* ── open register ── */

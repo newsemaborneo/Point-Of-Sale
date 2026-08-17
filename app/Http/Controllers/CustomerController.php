@@ -1,16 +1,23 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Customer\PayCustomerDebtRequest;
+use App\Http\Requests\Customer\StoreCustomerRequest;
+use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Models\Customer;
 use App\Models\CustomerDebt;
-use App\Models\CustomerDebtPayment;
+use App\Services\CustomerService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
-    // 6. Manajemen Pelanggan: data, riwayat pembelian, member, poin, voucher, piutang
+    protected CustomerService $customerService;
+
+    public function __construct(CustomerService $customerService)
+    {
+        $this->customerService = $customerService;
+    }
 
     public function index(Request $request)
     {
@@ -23,22 +30,13 @@ class CustomerController extends Controller
 
     public function create()
     {
-        return view('customers.form', ['customer' => new Customer()]);
+        $memberTypes = \App\Models\MemberType::all();
+        return view('customers.form', ['customer' => new Customer(), 'memberTypes' => $memberTypes]);
     }
 
-    public function store(Request $request)
+    public function store(StoreCustomerRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'member_type' => 'nullable|in:regular,silver,gold,platinum',
-        ]);
-        $data['member_code'] = 'MBR-' . Str::upper(Str::random(6));
-
-        Customer::create($data);
-
+        $this->customerService->createCustomer($request->validated());
         return redirect()->route('customers.index')->with('success', 'Pelanggan berhasil ditambahkan.');
     }
 
@@ -56,20 +54,13 @@ class CustomerController extends Controller
 
     public function edit(Customer $customer)
     {
-        return view('customers.form', ['customer' => $customer]);
+        $memberTypes = \App\Models\MemberType::all();
+        return view('customers.form', ['customer' => $customer, 'memberTypes' => $memberTypes]);
     }
 
-    public function update(Request $request, Customer $customer)
+    public function update(UpdateCustomerRequest $request, Customer $customer)
     {
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'nullable|string',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'member_type' => 'nullable|in:regular,silver,gold,platinum',
-        ]);
-        $customer->update($data);
-
+        $this->customerService->updateCustomer($customer, $request->validated());
         return redirect()->route('customers.index')->with('success', 'Pelanggan berhasil diperbarui.');
     }
 
@@ -79,37 +70,21 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', 'Pelanggan berhasil dihapus.');
     }
 
-    /** Riwayat pembelian pelanggan */
     public function purchaseHistory(Customer $customer)
     {
         $sales = $customer->sales()->with('items.product')->latest()->paginate(15);
         return view('customers.purchase-history', compact('customer', 'sales'));
     }
 
-    /** Piutang pelanggan */
     public function debts(Customer $customer)
     {
         $debts = $customer->debts()->with('payments')->get();
         return view('customers.debts', compact('customer', 'debts'));
     }
 
-    public function payDebt(Request $request, CustomerDebt $debt)
+    public function payDebt(PayCustomerDebtRequest $request, CustomerDebt $debt)
     {
-        $data = $request->validate(['amount' => 'required|numeric|min:1', 'note' => 'nullable|string']);
-
-        DB::transaction(function () use ($debt, $data) {
-            CustomerDebtPayment::create([
-                'customer_debt_id' => $debt->id,
-                'amount' => $data['amount'],
-                'paid_date' => now()->toDateString(),
-                'note' => $data['note'] ?? null,
-            ]);
-
-            $debt->paid_amount += $data['amount'];
-            $debt->status = $debt->paid_amount >= $debt->amount ? 'paid' : 'partial';
-            $debt->save();
-        });
-
+        $this->customerService->payCustomerDebt($debt, $request->validated());
         return back()->with('success', 'Pembayaran piutang berhasil disimpan.');
     }
 }

@@ -3,32 +3,45 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Milon\Barcode\Facades\DNS1DFacade as DNS1D;
+use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
 
 class BarcodeController extends Controller
 {
     // 13. Barcode: generate, cetak, scan, QR Code
     // Rekomendasi package: milon/barcode (untuk barcode Code128/EAN) & simplesoftwareio/simple-qrcode (QR)
 
-    public function index()
+    public function index(Request $request)
     {
-        return view('barcode.index'); // Akan mengarahkan ke tampilan manajemen barcode
+        $query = Product::query()->where('is_active', true);
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+        $products = $query->paginate(20)->appends($request->all());
+
+        return view('barcode.index', compact('products'));
     }
 
     /** Generate barcode image (SVG/PNG) untuk 1 produk */
     public function generate(Product $product)
     {
-        return redirect()->back()->with('info', 'Fitur generate barcode belum diimplementasikan.');
+        $code = $product->barcode ?: $product->sku;
+        if (!$code) return response('No barcode/SKU available', 400);
+        return view('barcode.single', compact('product', 'code'));
     }
 
-    /** Generate QR Code (misal untuk struk / kode voucher) */
     public function generateQrCode(Request $request)
     {
         $data = $request->validate(['content' => 'required|string']);
 
-        return redirect()->back()->with('info', 'Fitur generate QR code belum diimplementasikan.');
+        return redirect()->back()->with('qr_content', $data['content'])->with('success', 'QR Code berhasil dibuat.');
     }
 
-    /** Cetak label barcode untuk banyak produk sekaligus */
     public function printLabels(Request $request)
     {
         $data = $request->validate([
@@ -37,7 +50,10 @@ class BarcodeController extends Controller
             'copies' => 'nullable|integer|min:1',
         ]);
 
-        return redirect()->back()->with('info', 'Fitur cetak label barcode belum diimplementasikan.');
+        $products = Product::whereIn('id', $data['product_ids'])->get();
+        $copies = $data['copies'] ?? 1;
+
+        return view('barcode.print', compact('products', 'copies'));
     }
 
     /** Endpoint scan: cari produk dari hasil scan barcode/QR */

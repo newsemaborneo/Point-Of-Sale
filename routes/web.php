@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -21,15 +22,15 @@ use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\NotificationController;
-
+use App\Http\Controllers\AiController;
 
 
 // ===== AUTH (Modul 10) =====
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 Route::get('/login', function () {
-    return auth()->check() ? redirect()->route('dashboard') : view('auth.login');
+    return Auth::check() ? redirect()->route('dashboard') : view('auth.login');
 })->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.store');
 
@@ -40,6 +41,16 @@ Route::middleware('auth')->group(function () {
 
     // ===== 1. DASHBOARD (semua role) =====
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // ===== AI SUPERADMIN =====
+    Route::middleware('role:admin,supervisor')->group(function () {
+        Route::get('/ai', [AiController::class, 'index'])->name('ai.index');
+        Route::post('/ai/chat', [AiController::class, 'chat'])->name('ai.chat');
+        Route::get('/ai/dashboard-data', [AiController::class, 'dashboardData'])->name('ai.dashboard-data');
+        Route::post('/ai/conversations/new', [AiController::class, 'newConversation'])->name('ai.conversations.new');
+        Route::delete('/ai/conversations/{conversation}', [AiController::class, 'destroyConversation'])->name('ai.conversations.destroy');
+        Route::get('/ai/alerts', [AiController::class, 'getAlerts'])->name('ai.alerts');
+    });
 
     // ===== 2. MANAJEMEN PRODUK =====
     // Lihat produk: semua role boleh (kasir butuh untuk cari produk saat POS)
@@ -102,6 +113,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/{sale}/send-receipt', [TransactionController::class, 'sendReceipt'])->name('send-receipt')->middleware('role:cashier,admin,supervisor');
     });
 
+    // ===== MANAJEMEN TIPE MEMBER =====
+    Route::resource('member-types', \App\Http\Controllers\MemberTypeController::class)->except(['show'])->middleware('role:admin,supervisor');
+
     // ===== 6. MANAJEMEN PELANGGAN =====
     // Lihat pelanggan: semua role (kasir butuh untuk POS)
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
@@ -140,6 +154,7 @@ Route::middleware('auth')->group(function () {
     // ===== 9. RETUR =====
     // Retur penjualan: kasir, admin, supervisor
     Route::middleware('role:cashier,admin,supervisor')->group(function () {
+        Route::get('/api/sales/by-invoice/{invoice}', [TransactionController::class, 'findByInvoice']);
         Route::get('/sale-returns', [ReturnController::class, 'indexSaleReturns'])->name('sale-returns.index');
         Route::get('/sales/{sale}/return/create', [ReturnController::class, 'createSaleReturnForm'])->name('sales.return.create');
         Route::post('/sales/{sale}/return', [ReturnController::class, 'storeSaleReturn'])->name('sales.return');
@@ -186,8 +201,8 @@ Route::middleware('auth')->group(function () {
 
     // ===== 12. MANAJEMEN KAS & SHIFT =====
     Route::prefix('cash')->name('cash.')->group(function () {
-        // Operasional kas harian: kasir, admin, supervisor
-        Route::middleware('role:cashier,admin,supervisor')->group(function () {
+        // Fitur Buka/Tutup Shift Kasir HANYA untuk role cashier
+        Route::middleware('role:cashier')->group(function () {
             Route::get('/shift', [CashController::class, 'shiftIndex'])->name('shift');
             Route::post('/open', [CashController::class, 'openRegister'])->name('open');
             Route::post('/{cashRegister}/close', [CashController::class, 'closeRegister'])->name('close');
@@ -252,3 +267,5 @@ Route::middleware('auth')->group(function () {
     Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
     Route::post('/notifications/generate', [NotificationController::class, 'generateSystemNotifications'])->name('notifications.generate')->middleware('role:admin');
 });
+
+Route::get('/api/ai-data/context', [\App\Http\Controllers\AiController::class, 'getSystemContextApi']);

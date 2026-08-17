@@ -1,24 +1,35 @@
+@props(['title', 'hideHeader' => false, 'hideSidebar' => false, 'noScroll' => false, 'noPadding' => false])
 <!DOCTYPE html>
 <html lang="id" class="antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? config('app.name', 'POS App') }}</title>
     @include('includes.vite-assets')
     {{-- Alpine.js --}}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('styles')
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex selection:bg-indigo-500/30 selection:text-indigo-900">
+<body x-data="{ sidebarOpen: window.innerWidth >= 1024 }" @resize.window="if (window.innerWidth >= 1024) { sidebarOpen = true } else { sidebarOpen = false }" class="bg-slate-50 text-slate-800 {{ $noScroll ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]' }} selection:bg-indigo-500/30 selection:text-indigo-900">
     {{-- Sidebar --}}
-    @include('layouts.sidebar')
+    @if(!$hideSidebar)
+        @include('layouts.sidebar')
+    @endif
 
     {{-- Main Content --}}
-    <div class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+    <div :class="sidebarOpen && !{{ $hideSidebar ? 'true' : 'false' }} ? 'lg:ml-72' : 'ml-0'" class="flex-1 flex flex-col {{ $noScroll ? 'h-[100dvh]' : 'min-h-[100dvh]' }} transition-all duration-300">
         {{-- Header --}}
-        <header class="fixed top-0 left-0 lg:left-72 right-0 bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200/60 z-30 transition-all duration-300">
+        @if(!$hideHeader)
+        <header :class="sidebarOpen ? 'lg:left-72' : 'left-0'" class="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200/60 z-30 transition-all duration-300">
             <div class="mx-auto w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                <div>
+                <div class="flex items-center gap-3">
+                    {{-- Hamburger Menu (Toggle Sidebar) --}}
+                    <button @click="sidebarOpen = !sidebarOpen" type="button" class="-ml-2 p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                        </svg>
+                    </button>
                     {{-- Optional Breadcrumbs/Title can go here --}}
                     <h1 class="text-xl font-bold text-slate-800">{{ $title ?? 'Dashboard' }}</h1>
                 </div>
@@ -37,9 +48,10 @@
                 </div>
             </div>
         </header>
+        @endif
 
         {{-- Page Content --}}
-        <main class="flex-1 mx-auto w-full max-w-7xl px-4 pt-24 pb-8 sm:px-6 lg:px-8">
+        <main class="flex-1 flex flex-col min-h-0 mx-auto w-full {{ $noPadding ? 'p-0 max-w-none' : 'max-w-7xl ' . ($hideHeader ? 'p-0 sm:p-6 lg:p-8' : 'px-4 pt-24 pb-8 sm:px-6 lg:px-8') }}">
             @if (session('success'))
                 <div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm backdrop-blur-sm flex items-start gap-3 animate-fade-in-down">
                     <div class="mt-0.5 rounded-full bg-emerald-100 p-1">

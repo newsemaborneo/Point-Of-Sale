@@ -1,11 +1,23 @@
-<aside class="w-72 flex-shrink-0 sticky top-0 h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 z-40 shadow-2xl" aria-label="Sidebar">
-    <div class="h-16 flex items-center px-6 border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-sm">
+{{-- Backdrop (Mobile) --}}
+<div x-show="sidebarOpen" style="display: none;"
+     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+     x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+     x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     @click="sidebarOpen = false"></div>
+
+<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+       class="fixed top-0 left-0 w-72 flex-shrink-0 h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 z-50 shadow-2xl"
+       aria-label="Sidebar">
+    <div class="h-16 flex items-center justify-between px-6 border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-sm">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
                 {{ substr(config('app.name', 'POS'), 0, 1) }}
             </div>
             <a href="{{ route('dashboard') }}" class="text-xl font-bold text-white tracking-tight">{{ config('app.name', 'POS App') }}</a>
         </div>
+        <button @click="sidebarOpen = false" class="lg:hidden p-2 -mr-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
     </div>
 
     <div class="flex-1 overflow-y-auto py-6 custom-scrollbar">
@@ -19,6 +31,13 @@
                         <span>Dashboard</span>
                     </a>
 
+                    @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('supervisor'))
+                    <a href="{{ route('ai.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('ai.*') ? 'bg-gradient-to-r from-indigo-600/20 to-violet-600/10 text-indigo-300 ring-1 ring-indigo-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                        <svg class="h-5 w-5 {{ request()->routeIs('ai.*') ? 'text-indigo-300' : 'text-slate-500' }}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.873l-1.16 3.2a.75.75 0 001.45.46l1.01-2.79m-1.3-1.87h.01m8.922-8.922A5.25 5.25 0 1017.7 17.7l-1.99 1.99a.75.75 0 01-1.06 0l-1.06-1.06a.75.75 0 010-1.06l1.99-1.99A5.25 5.25 0 0017.7 6.95zm-8.408 7.35a.75.75 0 001.06 0l.53-.53m-1.59-4.46l.53-.53a.75.75 0 011.06 0l.53.53M13.5 13.5l1.06 1.06" /></svg>
+                        <span>AI Chat</span>
+                    </a>
+                    @endif
+
                     {{-- Kasir (POS): hanya role cashier — route transactions.pos di-middleware role:cashier --}}
                     {{-- Pengecekan ganda 'cashier'/'kasir' untuk berjaga-jaga terhadap ketidakkonsistenan nama role di database --}}
                     @if(auth()->user()->hasRole('cashier') || auth()->user()->hasRole('kasir'))
@@ -28,8 +47,8 @@
                     </a>
                     @endif
 
-                    {{-- Manajemen Shift Kasir: cashier/kasir untuk buka-tutup shift sendiri, admin/supervisor untuk memantau shift semua kasir --}}
-                    @if(auth()->user()->hasRole('cashier') || auth()->user()->hasRole('kasir') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('supervisor'))
+                    {{-- Manajemen Shift Kasir: HANYA untuk kasir --}}
+                    @if(auth()->user()->hasRole('cashier') || auth()->user()->hasRole('kasir'))
                     <a href="{{ route('cash.shift') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('cash.shift*') ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                         <svg class="h-5 w-5 {{ request()->routeIs('cash.shift*') ? 'text-indigo-400' : 'text-slate-500' }}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         <span>Manajemen Shift Kasir</span>

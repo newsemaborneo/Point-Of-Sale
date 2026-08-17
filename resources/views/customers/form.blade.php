@@ -29,11 +29,13 @@
                 </label>
                 <label class="block">
                     <span class="text-sm font-medium text-slate-700">Tipe Member</span>
-                    <select name="member_type" class="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200">
-                        <option value="regular" {{ old('member_type', $customer->member_type) == 'regular' ? 'selected' : '' }}>Regular</option>
-                        <option value="silver" {{ old('member_type', $customer->member_type) == 'silver' ? 'selected' : '' }}>Silver</option>
-                        <option value="gold" {{ old('member_type', $customer->member_type) == 'gold' ? 'selected' : '' }}>Gold</option>
-                        <option value="platinum" {{ old('member_type', $customer->member_type) == 'platinum' ? 'selected' : '' }}>Platinum</option>
+                    <select name="member_type_id" class="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200">
+                        <option value="">Pilih Tipe Member (Opsional)</option>
+                        @foreach($memberTypes as $type)
+                            <option value="{{ $type->id }}" {{ old('member_type_id', $customer->member_type_id) == $type->id ? 'selected' : '' }}>
+                                {{ $type->name }} (Batas: Rp {{ number_format($type->minimum_spend, 0, ',', '.') }})
+                            </option>
+                        @endforeach
                     </select>
                 </label>
             </div>

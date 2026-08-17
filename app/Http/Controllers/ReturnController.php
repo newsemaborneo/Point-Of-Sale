@@ -1,168 +1,71 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\Sale;
-use App\Models\SaleReturn;
-use App\Models\SaleReturnItem;
+use App\Http\Requests\Return\StorePurchaseReturnRequest;
+use App\Http\Requests\Return\StoreSaleReturnRequest;
+use App\Http\Requests\Return\UpdatePurchaseReturnRequest;
+use App\Http\Requests\Return\UpdateSaleReturnRequest;
 use App\Models\Purchase;
 use App\Models\PurchaseReturn;
-use App\Models\PurchaseReturnItem;
-use App\Models\ProductStock;
-use App\Models\StockMovement;
+use App\Models\Sale;
+use App\Models\SaleReturn;
+use App\Services\ReturnService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class ReturnController extends Controller
 {
-    // 9. Retur: retur penjualan, retur pembelian, alasan retur, pengembalian uang
+    protected ReturnService $returnService;
 
-    /** Menampilkan form untuk retur penjualan */
+    public function __construct(ReturnService $returnService)
+    {
+        $this->returnService = $returnService;
+    }
+
     public function createSaleReturnForm(Sale $sale)
     {
         $sale->load('items.product');
         return view('returns.sale-return-form', compact('sale'));
     }
 
-    /** Retur penjualan: barang kembali ke stok, uang dikembalikan ke pelanggan */
-    public function storeSaleReturn(Request $request, Sale $sale)
+    public function storeSaleReturn(StoreSaleReturnRequest $request, Sale $sale)
     {
-        $data = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'reason' => 'nullable|string',
-            'refund_method' => 'required|in:cash,store_credit,bank_transfer',
-        ]);
-
-        DB::transaction(function () use ($data, $sale, $request) {
-            $total = 0;
-            $return = SaleReturn::create([
-                'return_number' => 'RTS-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6)),
-                'sale_id' => $sale->id,
-                'user_id' => $request->user()?->id,
-                'return_date' => now()->toDateString(),
-                'reason' => $data['reason'] ?? null,
-                'refund_method' => $data['refund_method'],
-                'branch_id' => $sale->branch_id, // Tambahkan branch_id dari sale
-                'total' => 0,
-            ]);
-
-            foreach ($data['items'] as $item) {
-                $saleItem = $sale->items()->where('product_id', $item['product_id'])->firstOrFail();
-                $subtotal = $saleItem->price * $item['quantity'];
-                $total += $subtotal;
-
-                SaleReturnItem::create([
-                    'sale_return_id' => $return->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'price' => $saleItem->price,
-                    'subtotal' => $subtotal,
-                ]);
-
-                // Barang kembali ke stok gudang asal transaksi
-                $stock = ProductStock::firstOrCreate(
-                    ['product_id' => $item['product_id'], 'warehouse_id' => $sale->warehouse_id],
-                    ['quantity' => 0]
-                );
-                $before = $stock->quantity;
-                $stock->increment('quantity', $item['quantity']);
-
-                StockMovement::create([
-                    'product_id' => $item['product_id'],
-                    'warehouse_id' => $sale->warehouse_id,
-                    'type' => 'sale_return',
-                    'quantity' => $item['quantity'],
-                    'quantity_before' => $before,
-                    'quantity_after' => $before + $item['quantity'],
-                    'reference_type' => SaleReturn::class,
-                    'reference_id' => $return->id,
-                    'user_id' => $request->user()?->id,
-                ]);
-            }
-
-            $return->update(['total' => $total]);
-        });
-
+        $this->returnService->processSaleReturn($sale, $request->validated(), $request->user()?->id);
         return redirect()->route('sale-returns.index')->with('success', 'Retur penjualan berhasil dicatat.');
     }
 
     public function indexSaleReturns(Request $request)
     {
-        $returnsQuery = SaleReturn::with(['sale', 'sale.customer']);
+        $returnsQuery = SaleReturn::with(['sale', 'sale.customer', 'user']);
 
-        if (!auth()->user()->hasRole('admin') && !auth()->user()->hasRole('supervisor')) {
-            $returnsQuery->where('branch_id', auth()->user()->branch_id);
+        // Admin melihat semua return dari semua cabang
+        // Supervisor melihat semua return dari cabang mereka
+        // Kasir hanya melihat return yang mereka buat
+        if (auth()->user()->hasRole('admin')) {
+            // Admin: semua return
+        } elseif (auth()->user()->hasRole('supervisor')) {
+            // Supervisor: return dari cabang yang sama
+            $returnsQuery->whereHas('sale', function ($query) {
+                $query->where('branch_id', auth()->user()->branch_id);
+            });
+        } else {
+            // Kasir: hanya return yang mereka buat
+            $returnsQuery->where('user_id', auth()->id());
         }
+
         $returns = $returnsQuery->latest()->paginate(20);
         return view('returns.sale-returns', compact('returns'));
     }
 
-    /** Menampilkan form untuk retur pembelian */
     public function createPurchaseReturnForm(Purchase $purchase)
     {
         $purchase->load('items.product');
         return view('returns.purchase-return-form', compact('purchase'));
     }
 
-    /** Retur pembelian: barang keluar dari stok, dikembalikan ke supplier */
-    public function storePurchaseReturn(Request $request, Purchase $purchase)
+    public function storePurchaseReturn(StorePurchaseReturnRequest $request, Purchase $purchase)
     {
-        $data = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'reason' => 'nullable|string',
-        ]);
-
-        DB::transaction(function () use ($data, $purchase, $request) {
-            $total = 0;
-            $return = PurchaseReturn::create([
-                'return_number' => 'RTP-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6)),
-                'purchase_id' => $purchase->id,
-                'user_id' => $request->user()?->id,
-                'return_date' => now()->toDateString(),
-                'reason' => $data['reason'] ?? null,
-                'total' => 0,
-            ]);
-
-            foreach ($data['items'] as $item) {
-                $purchaseItem = $purchase->items()->where('product_id', $item['product_id'])->firstOrFail();
-                $subtotal = $purchaseItem->price * $item['quantity'];
-                $total += $subtotal;
-
-                PurchaseReturnItem::create([
-                    'purchase_return_id' => $return->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'price' => $purchaseItem->price,
-                    'subtotal' => $subtotal,
-                ]);
-
-                $stock = ProductStock::firstOrCreate(
-                    ['product_id' => $item['product_id'], 'warehouse_id' => $purchase->warehouse_id],
-                    ['quantity' => 0]
-                );
-                $before = $stock->quantity;
-                $stock->decrement('quantity', $item['quantity']);
-
-                StockMovement::create([
-                    'product_id' => $item['product_id'],
-                    'warehouse_id' => $purchase->warehouse_id,
-                    'type' => 'purchase_return',
-                    'quantity' => -$item['quantity'],
-                    'quantity_before' => $before,
-                    'quantity_after' => $before - $item['quantity'],
-                    'reference_type' => PurchaseReturn::class,
-                    'reference_id' => $return->id,
-                    'user_id' => $request->user()?->id,
-                ]);
-            }
-
-            $return->update(['total' => $total]);
-        });
-
+        $this->returnService->processPurchaseReturn($purchase, $request->validated(), $request->user()?->id);
         return redirect()->route('purchase-returns.index')->with('success', 'Retur pembelian berhasil dicatat.');
     }
 
@@ -171,8 +74,6 @@ class ReturnController extends Controller
         $returns = PurchaseReturn::with(['purchase', 'purchase.supplier'])->latest()->paginate(20);
         return view('returns.purchase-returns', compact('returns'));
     }
-
-    // ===== CRUD untuk Sale Returns =====
 
     public function showSaleReturn(SaleReturn $saleReturn)
     {
@@ -186,51 +87,17 @@ class ReturnController extends Controller
         return view('returns.sale-return-edit', compact('saleReturn'));
     }
 
-    public function updateSaleReturn(Request $request, SaleReturn $saleReturn)
+    public function updateSaleReturn(UpdateSaleReturnRequest $request, SaleReturn $saleReturn)
     {
-        $data = $request->validate([
-            'reason' => 'nullable|string',
-            'refund_method' => 'required|in:cash,store_credit,bank_transfer',
-        ]);
-
-        $saleReturn->update($data);
+        $saleReturn->update($request->validated());
         return redirect()->route('sale-returns.index')->with('success', 'Data retur penjualan berhasil diperbarui.');
     }
 
     public function destroySaleReturn(SaleReturn $saleReturn)
     {
-        // Kembalikan stok yang sudah dikurangi saat retur
-        DB::transaction(function () use ($saleReturn) {
-            foreach ($saleReturn->items as $item) {
-                $stock = ProductStock::firstOrCreate(
-                    ['product_id' => $item->product_id, 'warehouse_id' => $saleReturn->sale->warehouse_id],
-                    ['quantity' => 0]
-                );
-                $before = $stock->quantity;
-                $stock->decrement('quantity', $item->quantity);
-
-                // Catat pergerakan stok pembatalan retur
-                StockMovement::create([
-                    'product_id' => $item->product_id,
-                    'warehouse_id' => $saleReturn->sale->warehouse_id,
-                    'type' => 'sale_return_cancel',
-                    'quantity' => -$item->quantity,
-                    'quantity_before' => $before,
-                    'quantity_after' => $before - $item->quantity,
-                    'reference_type' => SaleReturn::class,
-                    'reference_id' => $saleReturn->id,
-                    'note' => 'Pembatalan retur penjualan ' . $saleReturn->return_number,
-                    'user_id' => auth()->id(),
-                ]);
-            }
-
-            $saleReturn->delete();
-        });
-
+        $this->returnService->cancelSaleReturn($saleReturn, auth()->id());
         return redirect()->route('sale-returns.index')->with('success', 'Retur penjualan berhasil dibatalkan.');
     }
-
-    // ===== CRUD untuk Purchase Returns =====
 
     public function showPurchaseReturn(PurchaseReturn $purchaseReturn)
     {
@@ -244,46 +111,15 @@ class ReturnController extends Controller
         return view('returns.purchase-return-edit', compact('purchaseReturn'));
     }
 
-    public function updatePurchaseReturn(Request $request, PurchaseReturn $purchaseReturn)
+    public function updatePurchaseReturn(UpdatePurchaseReturnRequest $request, PurchaseReturn $purchaseReturn)
     {
-        $data = $request->validate([
-            'reason' => 'nullable|string',
-        ]);
-
-        $purchaseReturn->update($data);
+        $purchaseReturn->update($request->validated());
         return redirect()->route('purchase-returns.index')->with('success', 'Data retur pembelian berhasil diperbarui.');
     }
 
     public function destroyPurchaseReturn(PurchaseReturn $purchaseReturn)
     {
-        // Kembalikan stok yang sudah ditambahkan saat retur
-        DB::transaction(function () use ($purchaseReturn) {
-            foreach ($purchaseReturn->items as $item) {
-                $stock = ProductStock::firstOrCreate(
-                    ['product_id' => $item->product_id, 'warehouse_id' => $purchaseReturn->purchase->warehouse_id],
-                    ['quantity' => 0]
-                );
-                $before = $stock->quantity;
-                $stock->increment('quantity', $item->quantity);
-
-                // Catat pergerakan stok pembatalan retur
-                StockMovement::create([
-                    'product_id' => $item->product_id,
-                    'warehouse_id' => $purchaseReturn->purchase->warehouse_id,
-                    'type' => 'purchase_return_cancel',
-                    'quantity' => $item->quantity,
-                    'quantity_before' => $before,
-                    'quantity_after' => $before + $item->quantity,
-                    'reference_type' => PurchaseReturn::class,
-                    'reference_id' => $purchaseReturn->id,
-                    'note' => 'Pembatalan retur pembelian ' . $purchaseReturn->return_number,
-                    'user_id' => auth()->id(),
-                ]);
-            }
-
-            $purchaseReturn->delete();
-        });
-
+        $this->returnService->cancelPurchaseReturn($purchaseReturn, auth()->id());
         return redirect()->route('purchase-returns.index')->with('success', 'Retur pembelian berhasil dibatalkan.');
     }
 }

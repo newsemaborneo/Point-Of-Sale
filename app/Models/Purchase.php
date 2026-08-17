@@ -5,10 +5,11 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Models\Branch;
-
+use App\Traits\ClearsAiCache;
 
 class Purchase extends Model
 {
+    use ClearsAiCache;
     protected $fillable = [
         'invoice_number', 'purchase_order_id', 'supplier_id', 'warehouse_id', 'user_id',
         'purchase_date', 'total', 'paid_amount', 'payment_status', 'note',

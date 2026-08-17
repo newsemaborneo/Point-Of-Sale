@@ -1,23 +1,21 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Supplier\StoreSupplierRequest;
+use App\Http\Requests\Supplier\UpdateSupplierRequest;
 use App\Models\Supplier;
+use App\Services\SupplierService;
 use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
-    // 7. Supplier: data, pembelian, hutang, riwayat pembelian
-    // Catatan: menggunakan Blade web view, bukan API JSON.
-    // Rekomendasi package (belum di-install, hanya komentar):
-    // - milon/barcode
-    // - simplesoftwareio/simple-qrcode
-    // - barryvdh/laravel-dompdf
-    // - maatwebsite/excel
-    // - spatie/laravel-backup
-    // - WhatsApp Business API / Fonnte / Wablas integrations
-    // Desain: stok di-manage per gudang (product_stocks) dengan audit stock_movements.
-    // Transaksi POS harus mendukung diskon item, pajak, voucher, split payment, hold/resume.
-    // Poin loyalitas: 1 poin per Rp 10.000, laporan laba rugi = penjualan - HPP - cash out.
+    protected SupplierService $supplierService;
+
+    public function __construct(SupplierService $supplierService)
+    {
+        $this->supplierService = $supplierService;
+    }
 
     public function index(Request $request)
     {
@@ -35,31 +33,19 @@ class SupplierController extends Controller
     {
         return view('suppliers.form', [
             'supplier' => new Supplier(),
-            'title' => 'Tambah Supplier',
+            'title'    => 'Tambah Supplier',
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreSupplierRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'nullable|string|unique:suppliers,code',
-            'phone' => 'nullable|string',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'contact_person' => 'nullable|string',
-        ]);
-
-        Supplier::create($data);
-
-        return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier berhasil ditambahkan.');
+        $this->supplierService->createSupplier($request->validated());
+        return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil ditambahkan.');
     }
 
     public function show(Supplier $supplier)
     {
         $supplier->load(['purchases.items.product', 'debts']);
-
         return view('suppliers.show', compact('supplier'));
     }
 
@@ -67,46 +53,31 @@ class SupplierController extends Controller
     {
         return view('suppliers.form', [
             'supplier' => $supplier,
-            'title' => 'Ubah Supplier',
+            'title'    => 'Ubah Supplier',
         ]);
     }
 
-    public function update(Request $request, Supplier $supplier)
+    public function update(UpdateSupplierRequest $request, Supplier $supplier)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'nullable|string|unique:suppliers,code,' . $supplier->id,
-            'phone' => 'nullable|string',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'contact_person' => 'nullable|string',
-        ]);
-
-        $supplier->update($data);
-
-        return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier berhasil diperbarui.');
+        $this->supplierService->updateSupplier($supplier, $request->validated());
+        return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil diperbarui.');
     }
 
     public function destroy(Supplier $supplier)
     {
         $supplier->delete();
-
-        return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier berhasil dihapus.');
+        return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil dihapus.');
     }
 
     public function purchaseHistory(Supplier $supplier)
     {
         $purchases = $supplier->purchases()->with('items.product')->latest()->paginate(15);
-
         return view('suppliers.purchase-history', compact('supplier', 'purchases'));
     }
 
     public function debts(Supplier $supplier)
     {
         $debts = $supplier->debts()->with('payments')->get();
-
         return view('suppliers.debts', compact('supplier', 'debts'));
     }
 }

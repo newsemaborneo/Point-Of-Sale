@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\ClearsAiCache;
 
 class StockMovement extends Model
 {
+    use ClearsAiCache;
     protected $fillable = [
         'product_id', 'warehouse_id', 'destination_warehouse_id', 'type', 'quantity',
         'quantity_before', 'quantity_after', 'reference_type', 'reference_id', 'note', 'user_id',

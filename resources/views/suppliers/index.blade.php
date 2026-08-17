@@ -61,15 +61,7 @@
             </table>
         </div>
 
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
-            <p>
-                Catatan: stok dikelola per gudang melalui tabel <code>product_stocks</code>,
-                pergerakan stok disimpan di <code>stock_movements</code> sebagai audit trail.
-            </p>
-            <p class="mt-2 text-slate-500">
-                Rekomendasi package: <code>milon/barcode</code>, <code>simplesoftwareio/simple-qrcode</code>, <code>barryvdh/laravel-dompdf</code>, <code>maatwebsite/excel</code>, <code>spatie/laravel-backup</code>.
-            </p>
-        </div>
+
 
         <div class="mt-6">{{ $suppliers->links() }}</div>
     </div>

@@ -25,7 +25,7 @@
         {{-- Debt Summary --}}
         <div class="grid gap-4 sm:grid-cols-4">
             <div class="rounded-2xl border border-slate-200 bg-white p-4 text-center">
-                <p class="text-2xl font-bold text-slate-900">{{ $debts->total() }}</p>
+                <p class="text-2xl font-bold text-slate-900">{{ $debts->count() }}</p>
                 <p class="text-sm text-slate-600">Total Hutang</p>
             </div>
             <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-center">
@@ -108,12 +108,7 @@
                 </div>
             </div>
 
-            {{-- Pagination --}}
-            @if($debts->hasPages())
-            <div class="border-t border-slate-200 px-6 py-4">
-                {{ $debts->links() }}
-            </div>
-            @endif
+
         </div>
         @else
         <div class="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">

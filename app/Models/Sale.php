@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\ClearsAiCache;
 
 class Sale extends Model
 {
+    use ClearsAiCache;
     protected $fillable = [
         'invoice_number', 'customer_id', 'warehouse_id', 'branch_id', 'user_id', 'cash_register_id',
         'voucher_id', 'subtotal', 'discount_total', 'tax_total', 'grand_total', 'paid_amount',

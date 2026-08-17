@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'ai' => [
+        'microservice_url' => env('AI_MICROSERVICE_URL'),
+        'microservice_token' => env('AI_MICROSERVICE_TOKEN', 'super-secret-ai-token'),
+        'gemini_api_key' => env('GEMINI_API_KEY'),
+        'gemini_model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+    ],
+
 ];
