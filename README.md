@@ -1,202 +1,177 @@
-# POS System — AI Integrated
+# 🛒 LAKUPOS — POS System with AI Integration
 
-Sistem **Point of Sale (POS)** berbasis Laravel yang dilengkapi dengan fitur manajemen penjualan, inventory, pelanggan, supplier, kas, laporan, serta **AI Assistant berbasis Gemini**.
+**Sistem Point of Sale (POS) berbasis Laravel dengan AI Assistant bertenaga Google Gemini**
 
-Project ini dirancang untuk membantu operasional toko sekaligus memberikan analisis bisnis menggunakan Artificial Intelligence.
+Kelola penjualan, inventory, pelanggan, supplier, dan kas — sekaligus dapatkan analisis bisnis
+otomatis lewat AI yang memahami data toko Anda secara *real-time*.
+
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat&logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=flat&logo=laravel&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-8E75B2?style=flat&logo=googlegemini&logoColor=white)
+![License](https://img.shields.io/badge/License-Educational-lightgrey?style=flat)
 
 ---
 
-## 🚀 Fitur Utama
+## 📑 Daftar Isi
 
-### 📦 Point of Sale
+- [Fitur Utama](#-fitur-utama)
+- [Arsitektur AI](#-arsitektur-ai)
+- [Tech Stack](#️-tech-stack)
+- [Requirements](#-requirements)
+- [Instalasi](#-instalasi)
+- [Konfigurasi Environment](#️-konfigurasi-environment)
+- [Konfigurasi Database](#️-konfigurasi-database)
+- [Konfigurasi Gemini API](#-konfigurasi-gemini-api)
+- [AI Microservice](#-ai-microservice)
+- [Menjalankan Aplikasi](#️-menjalankan-aplikasi)
+- [Menjalankan Queue](#-menjalankan-queue)
+- [Struktur Project](#-struktur-project)
+- [Testing](#-testing)
+- [Keamanan](#-keamanan)
+- [Git Workflow](#-git-workflow)
+- [Dokumentasi](#-dokumentasi)
+- [Roadmap](#️-roadmap)
+- [Kontribusi & Lisensi](#-kontribusi--lisensi)
 
-* Transaksi penjualan
-* Keranjang belanja
-* Barcode
-* Cetak struk
-* Riwayat transaksi
-* Retur penjualan
-* Manajemen kasir
+---
 
-### 📊 Inventory Management
+## ✨ Fitur Utama
 
-* Manajemen produk
-* Stok produk
-* Stock movement
-* Stock adjustment
-* Peringatan stok minimum
-* Purchase / pembelian
-* Supplier
-* Transfer/pergerakan stok
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🧾 Point of Sale
+- Transaksi penjualan & keranjang belanja
+- Scan barcode
+- Cetak struk
+- Riwayat transaksi
+- Retur penjualan
+- Manajemen kasir
+
+### 📦 Inventory Management
+- Manajemen produk & stok
+- Stock movement & adjustment
+- Peringatan stok minimum
+- Purchase / pembelian
+- Manajemen supplier
+- Transfer stok antar cabang
+
+</td>
+<td width="50%" valign="top">
 
 ### 👥 Customer Management
+- Data & tipe member pelanggan
+- Piutang pelanggan (customer debt)
+- Riwayat transaksi per pelanggan
 
-* Data pelanggan
-* Member type
-* Customer debt / piutang
-* Riwayat transaksi pelanggan
+### 💵 Cash Management
+- Cash register & cash movement
+- Pemasukan & pengeluaran
+- Saldo kas real-time
 
-### 💰 Cash Management
+### 📊 Dashboard & Report
+- Dashboard penjualan
+- Laporan transaksi, stok, & pembelian
+- Laporan pelanggan
+- Analisis performa bisnis
 
-* Cash register
-* Cash movement
-* Pemasukan
-* Pengeluaran
-* Saldo kas
-
-### 📈 Dashboard & Report
-
-* Dashboard penjualan
-* Laporan transaksi
-* Laporan stok
-* Laporan pembelian
-* Laporan pelanggan
-* Analisis performa bisnis
+</td>
+</tr>
+</table>
 
 ### 🤖 AI Assistant
 
-Project menyediakan AI Assistant menggunakan **Google Gemini API**.
+Ditenagai oleh **Google Gemini API**, AI Assistant membantu:
 
-AI dapat digunakan untuk:
+| Kemampuan | Deskripsi |
+|---|---|
+| 💬 Tanya jawab bisnis | Menjawab pertanyaan operasional dalam bahasa natural |
+| 📈 Analisis penjualan | Menganalisis tren dan performa penjualan |
+| 🔍 Insight produk | Memberi insight produk terlaris & kurang laku |
+| 📦 Analisis stok | Membantu memantau kesehatan inventaris |
+| 💡 Rekomendasi bisnis | Memberi saran strategis berbasis data |
+| 🗂️ Data-driven answers | Menjawab berdasarkan data riil dari sistem POS |
+| 💾 Riwayat percakapan | Menyimpan histori percakapan AI |
 
-* Menjawab pertanyaan mengenai bisnis
-* Menganalisis data penjualan
-* Memberikan insight produk
-* Membantu analisis stok
-* Memberikan rekomendasi bisnis
-* Menjawab pertanyaan berdasarkan data POS
-* Menyimpan percakapan AI
+---
 
-Arsitektur AI:
+## 🧠 Arsitektur AI
 
-```text
-User
- │
- ▼
-Laravel Application
- │
- ▼
-AiController
- │
- ▼
-AI Service
- │
- ▼
-AI Microservice
- │
- ▼
-Google Gemini API
- │
- ▼
-AI Response
- │
- ▼
-Laravel
- │
- ▼
-User
+```mermaid
+flowchart TD
+    A[👤 User] --> B[Laravel Application]
+    B --> C[AiController]
+    C --> D[AI Service]
+    D --> E[AI Microservice - Python]
+    E --> F[(Google Gemini API)]
+    F --> E --> D --> C --> B --> A
+```
+
+> Alur singkat: permintaan pengguna diproses Laravel → diteruskan ke AI Microservice (Python/FastAPI)
+> → dikirim ke Gemini API → respons dikembalikan berlapis hingga tampil ke pengguna.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Teknologi |
+|---|---|
+| **Backend** | PHP, Laravel, MySQL, Eloquent ORM, Laravel Queue & Jobs |
+| **Frontend** | Blade, Bootstrap/CSS, JavaScript |
+| **AI** | Google Gemini API, Python, AI Microservice (FastAPI) |
+| **Tooling** | Git, GitHub, Composer, NPM |
+
+---
+
+## 📋 Requirements
+
+Pastikan tools berikut sudah terpasang sebelum memulai:
+
+- ✅ PHP **8.2+**
+- ✅ Composer
+- ✅ Node.js & NPM
+- ✅ MySQL
+- ✅ Python **3.10+**
+- ✅ Git
+
+Cek versi sekaligus:
+
+```bash
+php -v && composer -V && node -v && npm -v && python --version && git --version
 ```
 
 ---
 
-# 🛠️ Tech Stack
-
-## Backend
-
-* PHP
-* Laravel
-* MySQL
-* Laravel Eloquent ORM
-* Laravel Queue
-* Laravel Jobs
-
-## Frontend
-
-* Blade
-* Bootstrap / CSS
-* JavaScript
-
-## AI
-
-* Google Gemini API
-* Python
-* AI Microservice
-
-## Development Tools
-
-* Git
-* GitHub
-* Composer
-* NPM
-
----
-
-# 📋 Requirements
-
-Pastikan sudah menginstall:
-
-* PHP 8.2+
-* Composer
-* Node.js
-* NPM
-* MySQL
-* Python 3.10+
-* Git
-
-Cek versi:
+## 📥 Instalasi
 
 ```bash
-php -v
-composer -V
-node -v
-npm -v
-python --version
-git --version
-```
-
----
-
-# 📥 Installation
-
-Clone repository:
-
-```bash
+# 1. Clone repository
 git clone <URL_REPOSITORY>
-```
 
-Masuk ke directory:
-
-```bash
+# 2. Masuk ke directory project
 cd POS
-```
 
-Install dependency Laravel:
-
-```bash
+# 3. Install dependency Laravel
 composer install
-```
 
-Install dependency frontend:
-
-```bash
+# 4. Install dependency frontend
 npm install
 ```
 
 ---
 
-# ⚙️ Environment Configuration
+## ⚙️ Konfigurasi Environment
 
-Copy file `.env.example` menjadi `.env`.
-
-Windows:
+Salin file environment contoh:
 
 ```bash
+# Windows
 copy .env.example .env
-```
 
-Linux/macOS:
-
-```bash
+# Linux / macOS
 cp .env.example .env
 ```
 
@@ -208,9 +183,9 @@ php artisan key:generate
 
 ---
 
-# 🗄️ Database Configuration
+## 🗄️ Konfigurasi Database
 
-Edit file `.env`:
+Edit bagian koneksi database di `.env`:
 
 ```env
 DB_CONNECTION=mysql
@@ -221,67 +196,44 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-Sesuaikan konfigurasi dengan database lokal.
-
-Kemudian jalankan migration:
+Jalankan migrasi:
 
 ```bash
 php artisan migrate
 ```
 
-Jika project menggunakan seeder:
+Jika project menggunakan seeder, jalankan salah satu:
 
 ```bash
 php artisan db:seed
-```
-
-Atau:
-
-```bash
+# atau sekaligus
 php artisan migrate --seed
 ```
 
 ---
 
-# 🤖 Gemini API Configuration
+## 🤖 Konfigurasi Gemini API
 
-Project menggunakan Google Gemini sebagai Large Language Model.
+Project ini menggunakan **Google Gemini** sebagai Large Language Model.
 
-Buat API Key melalui:
-
-**Google AI Studio**
-
-https://aistudio.google.com/app/apikey
-
-Kemudian masukkan API key ke `.env`:
+1. Buat API key melalui **[Google AI Studio](https://aistudio.google.com/app/apikey)**
+2. Tambahkan ke file `.env`:
 
 ```env
 GEMINI_API_KEY=your_api_key_here
 ```
 
-> ⚠️ Jangan pernah memasukkan API key asli ke GitHub.
-
-Gunakan:
-
-```env
-GEMINI_API_KEY=
-```
-
-di `.env.example`.
+> ⚠️ **Penting:** jangan pernah commit API key asli ke repository.
+> Pastikan `.env.example` hanya berisi key kosong:
+> ```env
+> GEMINI_API_KEY=
+> ```
 
 ---
 
-# 🧠 AI Microservice
+## 🧪 AI Microservice
 
-Project memiliki folder:
-
-```text
-ai_microservice/
-```
-
-Microservice digunakan sebagai service terpisah untuk menangani proses AI.
-
-Struktur sederhananya:
+Microservice Python terpisah untuk menangani seluruh proses AI, berada di folder:
 
 ```text
 ai_microservice/
@@ -290,55 +242,38 @@ ai_microservice/
 └── ...
 ```
 
-Masuk ke directory:
+Langkah menjalankan:
 
 ```bash
+# 1. Masuk ke directory microservice
 cd ai_microservice
-```
 
-Buat virtual environment:
-
-```bash
+# 2. Buat virtual environment
 python -m venv venv
-```
 
-Aktifkan virtual environment pada Windows:
-
-```bash
+# 3. Aktifkan virtual environment (Windows)
 venv\Scripts\activate
-```
 
-Install dependency:
-
-```bash
+# 4. Install dependency
 pip install -r requirements.txt
-```
 
-Jalankan microservice sesuai entry point yang tersedia pada project.
-
-Contoh jika menggunakan FastAPI:
-
-```bash
+# 5. Jalankan microservice (contoh dengan FastAPI)
 uvicorn main:app --reload
 ```
 
 ---
 
-# ▶️ Menjalankan Laravel
+## ▶️ Menjalankan Aplikasi
 
-Jalankan server Laravel:
+**Server Laravel:**
 
 ```bash
 php artisan serve
 ```
 
-Aplikasi dapat diakses melalui:
+Aplikasi dapat diakses di **http://127.0.0.1:8000**
 
-```text
-http://127.0.0.1:8000
-```
-
-Untuk development frontend:
+**Development frontend:**
 
 ```bash
 npm run dev
@@ -346,24 +281,24 @@ npm run dev
 
 ---
 
-# 🔄 Menjalankan Queue
+## 🔄 Menjalankan Queue
 
-Jika project menggunakan Laravel Queue:
+Jika project menggunakan Laravel Queue untuk proses background:
 
 ```bash
 php artisan queue:work
 ```
 
-Queue digunakan untuk menjalankan proses background seperti:
+Queue digunakan untuk proses seperti:
 
-* AI processing
-* laporan
-* notification
-* proses berat lainnya
+- 🤖 AI processing
+- 📄 Generate laporan
+- 🔔 Notifikasi
+- ⚙️ Proses berat lainnya
 
 ---
 
-# 📁 Struktur Project
+## 📁 Struktur Project
 
 ```text
 POS/
@@ -375,12 +310,11 @@ POS/
 │   │   ├── Controllers/
 │   │   ├── Middleware/
 │   │   └── Requests/
-│   │
 │   ├── Jobs/
 │   ├── Models/
 │   └── Services/
 │
-├── ai_microservice/
+├── ai_microservice/        # Layanan AI berbasis Python
 │
 ├── config/
 │
@@ -397,7 +331,6 @@ POS/
 │   └── views/
 │
 ├── routes/
-│
 ├── tests/
 │
 ├── .env.example
@@ -407,33 +340,25 @@ POS/
 
 ---
 
-# 🧪 Testing
-
-Menjalankan seluruh test:
+## 🧪 Testing
 
 ```bash
+# Menjalankan seluruh test
 php artisan test
-```
 
-Menjalankan test tertentu:
-
-```bash
+# Menjalankan test tertentu
 php artisan test tests/Feature/AiControllerTest.php
-```
 
-Unit test:
-
-```bash
+# Menjalankan unit test saja
 php artisan test tests/Unit/
 ```
 
 ---
 
-# 🔐 Security
+## 🔐 Keamanan
 
-Jangan commit file `.env`.
-
-Pastikan `.gitignore` memiliki:
+- Jangan pernah commit file `.env`
+- Pastikan `.gitignore` mencakup:
 
 ```gitignore
 .env
@@ -450,111 +375,74 @@ Pastikan `.gitignore` memiliki:
 /storage/framework/views/
 ```
 
-API key Gemini harus disimpan menggunakan environment variable:
+- API key Gemini **wajib** disimpan sebagai environment variable, **tidak** ditulis langsung di source code:
 
 ```env
 GEMINI_API_KEY=your_api_key
 ```
 
-Jangan menulis API key langsung di source code.
-
 ---
 
-# 🌿 Git Workflow
-
-Untuk membuat perubahan:
+## 🌿 Git Workflow
 
 ```bash
+# 1. Buat branch fitur baru
 git checkout -b feature/nama-fitur
-```
 
-Setelah selesai:
-
-```bash
+# 2. Tambahkan perubahan
 git add .
-```
 
-Commit:
-
-```bash
+# 3. Commit dengan pesan yang jelas
 git commit -m "feat: add new feature"
-```
 
-Push:
-
-```bash
+# 4. Push ke remote
 git push origin feature/nama-fitur
 ```
 
-Kemudian buat **Pull Request** untuk dilakukan code review sebelum masuk ke branch production/main.
-
-Contoh:
+Alur review sebelum masuk production:
 
 ```text
-feature
-   │
-   ▼
-Pull Request
-   │
-   ▼
-Code Review
-   │
-   ▼
-develop
-   │
-   ▼
-Testing
-   │
-   ▼
-main
+feature → Pull Request → Code Review → develop → Testing → main
 ```
 
 ---
 
-# 📚 Documentation
+## 📚 Dokumentasi
 
-Dokumentasi project tersedia di:
+Dokumentasi lengkap tersedia di folder [`docs/`](docs/):
 
-```text
-docs/
-```
-
-Dokumen utama:
-
-* `PRD_FULL_POS_SYSTEM.md`
-* `PRD_SUPERADMIN_AI_ANALYSIS_RECOMMENDATION.md`
-* `AI_AGENT_IMPLEMENTATION_RECOMMENDATION.md`
+| Dokumen | Deskripsi |
+|---|---|
+| [`PRD_FULL_POS_SYSTEM.md`](docs/PRD_FULL_POS_SYSTEM.md) | Spesifikasi lengkap sistem POS |
+| [`PRD_SUPERADMIN_AI_ANALYSIS_RECOMMENDATION.md`](docs/PRD_SUPERADMIN_AI_ANALYSIS_RECOMMENDATION.md) | Spesifikasi fitur AI Analysis untuk SuperAdmin |
+| [`AI_AGENT_IMPLEMENTATION_RECOMMENDATION.md`](docs/AI_AGENT_IMPLEMENTATION_RECOMMENDATION.md) | Rekomendasi implementasi AI Agent |
 
 ---
 
-# 🗺️ Future Development
+## 🗺️ Roadmap
 
-Beberapa pengembangan yang dapat dilakukan:
-
-* [ ] AI Business Assistant
-* [ ] AI Sales Prediction
-* [ ] AI Stock Prediction
-* [ ] Product Recommendation
-* [ ] Automatic Business Insight
-* [ ] RAG untuk data bisnis
-* [ ] Function Calling / AI Tools
-* [ ] Multi-branch management
-* [ ] Advanced analytics
-* [ ] Dashboard AI untuk SuperAdmin
-* [ ] Automated reporting
-* [ ] Notification berbasis AI
+- [ ] AI Business Assistant
+- [ ] AI Sales Prediction
+- [ ] AI Stock Prediction
+- [ ] Product Recommendation
+- [ ] Automatic Business Insight
+- [ ] RAG untuk data bisnis
+- [ ] Function Calling / AI Tools
+- [ ] Multi-branch management
+- [ ] Advanced analytics
+- [ ] Dashboard AI untuk SuperAdmin
+- [ ] Automated reporting
+- [ ] Notification berbasis AI
 
 ---
 
-# 👨‍💻 Development
+## 👨‍💻 Konsep Pengembangan
 
-Project ini dikembangkan sebagai sistem POS modern yang menggabungkan **operational management + business intelligence + artificial intelligence**.
-
-Konsep utama:
+Project ini dikembangkan sebagai sistem POS modern yang menggabungkan
+**operational management + business intelligence + artificial intelligence**.
 
 ```text
 POS
- │
  ├── Sales
  ├── Inventory
  ├── Customer
@@ -571,8 +459,14 @@ POS
 
 ---
 
-# 📄 License
+## 📄 Kontribusi & Lisensi
 
 Project ini dibuat untuk kebutuhan pengembangan dan pembelajaran.
 
-Tambahkan informasi lisensi sesuai kebutuhan project sebelum digunakan untuk production.
+> Tambahkan informasi lisensi resmi sesuai kebutuhan sebelum digunakan untuk keperluan production.
+
+<div align="center">
+
+**Made with ❤️ for better retail operations**
+
+</div>
