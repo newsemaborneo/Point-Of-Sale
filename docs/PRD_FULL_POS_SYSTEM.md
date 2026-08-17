@@ -54,9 +54,34 @@ Sistem ini dirancang multi-role (RBAC - Role Based Access Control) dengan tingka
 - **Manajemen Pembayaran:** Rekonsiliasi Payment dari berbagai metode pembayaran (Tunai, Transfer, E-Wallet).
 
 ### 4.7. Modul Kecerdasan Buatan (AI Intelligence)
-- **AI Analysis Dashboard:** Menganalisis kondisi bisnis secara komprehensif dan real-time.
-- **AI Recommendation:** Memberikan saran proaktif (contoh: restock produk yang hampir habis, promosi untuk produk lambat terjual).
-- **AI Chat Assistant (Data-driven):** Chatbot interaktif untuk SuperAdmin yang dapat merespons pertanyaan natural language seputar operasional (misal: "Apa produk terlaris di cabang A minggu ini?") berdasarkan data riil dari sistem POS.
+- **AI Analysis Dashboard:** Menganalisis kondisi bisnis secara komprehensif dan real-time dengan minimal 5 parameter utama (Penjualan, Stok Kritis, Cashflow, Produk Terlaris, dan Ringkasan Inventaris).
+- **AI Recommendation:** Memberikan minimal 5 rekomendasi taktis secara proaktif (misal: restock produk kritis, promosi produk potensial, optimalisasi jam ramai, strategi up-selling/AOV, dan instruksi audit stok).
+- **AI Chat Assistant (Data-driven):** Chatbot interaktif dengan Role-Based Access Control (RBAC) yang membedakan jawaban berdasarkan jabatan (SuperAdmin, Admin, Supervisor, Cashier). Mendukung *visualisasi chart* jika jawaban membutuhkan komparasi data.
+  - *Typeahead Autocomplete Input:* Fitur saran otomatis saat mengetik di input chat, membantu memandu pengguna ke 20 pertanyaan analisis bisnis yang didukung sistem dengan kecocokan real-time dan highlight teks.
+  - *Typewriter Streaming Effect:* Teks balasan AI mengalir secara mulus dengan animasi ketikan bertahap yang adaptif terhadap panjang pesan agar terasa interaktif dan humanis.
+  - *Humanistic & Natural Tone:* Gaya bahasa asisten AI disetel agar ramah, menggunakan diksi yang memotivasi, santun, serta menggunakan istilah bisnis lokal yang akurat tanpa halusinasi data.
+- **20 Predefined Business Queries:** AI dibatasi secara ketat hanya menjawab 20 domain analisis bisnis berikut untuk menjamin nol halusinasi:
+  1. Omset hari ini
+  2. Produk terlaris bulan ini
+  3. Perbandingan penjualan bulanan
+  4. Jam paling sibuk hari ini (peak hours)
+  5. Pelanggan paling banyak belanja (top customers)
+  6. Total transaksi bulanan
+  7. Rata-rata nilai transaksi bulanan (basket size)
+  8. Produk stok kritis/hampir habis
+  9. Produk tidak laku 30 hari (dead stock)
+  10. Total produk aktif saat ini
+  11. Stok produk spesifik tertentu (aman/terarah)
+  12. Laba kotor bulan ini
+  13. Total HPP (Harga Pokok Penjualan) bulan ini
+  14. Total utang ke supplier
+  15. Metode pembayaran terpopuler
+  16. Margin keuntungan bulan ini
+  17. Prediksi omset bulan depan (WMA 3 bulan)
+  18. Prediksi stok produk habis paling cepat
+  19. Rekomendasi bundling produk (affinity analysis)
+  20. Tren penjualan 3 bulan terakhir
+- **AI Microservice:** Arsitektur terpisah menggunakan Python (FastAPI) untuk mengisolasi beban pemrosesan *prompting* dan berinteraksi secara aman dengan Google Gemini API, dioptimalkan dengan asinkronisasi (AJAX) dan Caching di sisi Laravel agar antarmuka tidak *lagging*.
 
 ### 4.8. Modul Laporan & Sistem
 - **Reporting:** Laporan penjualan, laporan stok, laba rugi kotor, laporan pajak, dan performa kasir.
@@ -79,17 +104,18 @@ Sistem ini dirancang multi-role (RBAC - Role Based Access Control) dengan tingka
 3. Saat barang tiba, Admin mencatat Pembelian (Purchase), yang otomatis menambah stok (ProductStock).
 4. Jika pembayaran belum lunas, sistem mencatat Utang Supplier (SupplierDebt).
 
-### 5.3 Alur Kerja SuperAdmin dengan AI
-1. SuperAdmin membuka halaman AI Intelligence di dashboard.
-2. Dashboard langsung menampilkan peringatan anomali (misal: Penurunan penjualan 20% di Cabang X).
-3. SuperAdmin membaca Rekomendasi AI (misal: Jalankan diskon untuk stok menumpuk).
-4. SuperAdmin menggunakan **AI Chat Assistant** untuk menggali lebih dalam ("Tolong rinci produk apa saja yang menumpuk di Cabang X"). AI merespons dengan data tabular yang tepat.
+### 5.3 Alur Kerja Pengguna dengan AI Intelligence
+1. Pengguna (SuperAdmin/Supervisor/Cashier) membuka halaman AI Intelligence di dashboard.
+2. Dashboard melakukan asinkronisasi (*AJAX*) untuk memuat data tanpa memblokir tampilan UI.
+3. Dashboard langsung menampilkan 5 *Insight* analisis dan 5 *Rekomendasi* spesifik cabang sesuai otoritas jabatan.
+4. Pengguna menggunakan **AI Chat Assistant** untuk menggali lebih dalam. AI merespons dengan jawaban *natural language* dan secara otomatis merender *grafik (chart)* jika terdapat data komparatif yang relevan.
 
 ## 6. Persyaratan Teknis & Arsitektur
-- **Framework Backend:** Laravel (PHP) dengan arsitektur MVC.
-- **Frontend / UI:** Blade Templates, Tailwind CSS (modern, glassmorphism), Alpine.js untuk interaktivitas komponen.
+- **Framework Backend Utama:** Laravel (PHP) dengan arsitektur MVC.
+- **Microservice AI:** Python (FastAPI) + Google GenAI SDK untuk pemrosesan AI, terpisah dari sistem inti untuk skalabilitas.
+- **Frontend / UI:** Blade Templates, Tailwind CSS (modern, glassmorphism), Alpine.js, dan Chart.js untuk interaktivitas komponen.
 - **Database:** Relational Database (MySQL / PostgreSQL) dengan struktur tabel dinormalisasi.
-- **Integrasi AI:** Menggunakan LLM API (seperti OpenAI GPT atau Gemini) dengan teknik Retrieval-Augmented Generation (RAG) untuk membaca database POS dan memberikan respons akurat.
+- **Integrasi AI & RAG:** Menggunakan Gemini API secara asinkron (*AJAX / Fetch*) dipadukan dengan teknik *Retrieval-Augmented Generation* (RAG) dinamis berbasis JSON, serta *Caching Redis/File* untuk menghindari bottleneck dan *lag*.
 - **Responsive Design:** Mendukung tampilan dekstop untuk back-office dan mobile-first (100dvh, edge-to-edge) untuk kemudahan kontrol via HP.
 
 ## 7. Fase Pengembangan & Roadmap

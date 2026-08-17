@@ -94,10 +94,10 @@ class GeminiService
                 ]
             ],
             'generationConfig' => [
-                'temperature' => 0.2, // Lowered temperature for consistent, strict data
+                'temperature' => 0.4, // Sedikit dinaikkan agar AI bisa memberikan analisis yang lebih kreatif/mendalam
                 'topK' => 40,
                 'topP' => 0.95,
-                'maxOutputTokens' => 2048,
+                'maxOutputTokens' => 4096, // Ditingkatkan untuk menampung respons analisis yang lebih panjang
             ]
         ];
 

@@ -21,7 +21,7 @@
                 </label>
                 <label class="block">
                     <span class="text-sm font-medium text-slate-700">SKU / Barcode</span>
-                    <input type="text" name="sku" value="{{ old('sku', $product->sku) }}" class="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200 @error('sku') border-red-500 @enderror" />
+                    <input type="text" name="sku" id="sku-input" value="{{ old('sku', $product->sku) }}" class="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all @error('sku') border-red-500 @enderror" />
                     @error('sku')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
@@ -103,4 +103,58 @@
             </div>
         </form>
     </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let lastKeyTime = Date.now();
+            let barcodeBuffer = '';
+            const skuInput = document.getElementById('sku-input');
+
+            // Prevent form submission when pressing enter directly inside the SKU field
+            if (skuInput) {
+                skuInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', e => {
+                const currentTime = Date.now();
+                const timeDiff = currentTime - lastKeyTime;
+                lastKeyTime = currentTime;
+
+                if (e.key.length === 1) { // Normal char
+                    if (timeDiff > 50) { 
+                        barcodeBuffer = e.key; // Reset if too slow
+                    } else {
+                        barcodeBuffer += e.key; // Append if fast
+                    }
+                } else if (e.key === 'Enter') {
+                    // If buffer looks like a barcode and was typed very fast
+                    if (barcodeBuffer.length >= 3 && timeDiff <= 50) {
+                        e.preventDefault(); // Prevent form submission
+                        
+                        if (skuInput) {
+                            skuInput.value = barcodeBuffer;
+                            // Visual feedback
+                            skuInput.classList.add('ring-4', 'ring-indigo-300', 'bg-indigo-50');
+                            setTimeout(() => skuInput.classList.remove('ring-4', 'ring-indigo-300', 'bg-indigo-50'), 500);
+                            
+                            // Cleanup if scanner accidentally typed into another focused field
+                            if (e.target.tagName === 'INPUT' && e.target.id !== 'sku-input') {
+                                const val = e.target.value;
+                                if (val.endsWith(barcodeBuffer)) {
+                                    e.target.value = val.slice(0, -barcodeBuffer.length);
+                                }
+                            }
+                        }
+                    }
+                    barcodeBuffer = '';
+                }
+            });
+        });
+    </script>
+    @endpush
 </x-layouts.app>

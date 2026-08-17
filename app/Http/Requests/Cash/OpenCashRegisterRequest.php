@@ -16,6 +16,7 @@ class OpenCashRegisterRequest extends FormRequest
         return [
             'branch_id'       => 'nullable|exists:branches,id',
             'opening_balance' => 'required|numeric|min:0',
+            'user_id'         => 'nullable|exists:users,id',
         ];
     }
 }

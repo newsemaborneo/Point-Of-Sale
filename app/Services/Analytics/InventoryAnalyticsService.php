@@ -105,4 +105,42 @@ class InventoryAnalyticsService
             'healthy_stock_count' => max($totalProducts - $lowStockItems->count(), 0),
         ];
     }
+    /**
+     * Predictive Restocking: Menggunakan velocity dan multiplier musiman (misal akhir pekan).
+     */
+    public function getPredictiveRestocking(?int $userBranchId = null, bool $isAdminOrSupervisor = true): ?array
+    {
+        // Ambil produk dengan velocity tertinggi (terlaris)
+        $topProducts = Product::with(['category', 'unit', 'supplier', 'stocks'])->get();
+        if ($topProducts->isEmpty()) return null;
+
+        $predictions = [];
+        $dayOfWeek = now()->dayOfWeek; // 0 = Sunday, 1 = Monday ... 5 = Friday, 6 = Saturday
+        $isApproachingWeekend = in_array($dayOfWeek, [4, 5]); // Thursday or Friday
+        $weekendMultiplier = $isApproachingWeekend ? 1.5 : 1.0;
+
+        foreach ($topProducts as $product) {
+            $velocity = $this->getSalesVelocity($product->id, 7);
+            if ($velocity < 1) continue;
+
+            $currentStock = $product->totalStock();
+            $predictedDemand3Days = $velocity * $weekendMultiplier * 3;
+
+            // Jika stok saat ini kurang dari prediksi permintaan 3 hari ke depan
+            if ($currentStock < $predictedDemand3Days && $currentStock > 0) {
+                $predictions[] = [
+                    'product' => $product,
+                    'current_stock' => $currentStock,
+                    'velocity' => $velocity,
+                    'predicted_demand' => round($predictedDemand3Days),
+                    'is_weekend_spike' => $isApproachingWeekend
+                ];
+            }
+        }
+
+        // Sort by predicted demand gap
+        usort($predictions, fn($a, $b) => ($b['predicted_demand'] - $b['current_stock']) <=> ($a['predicted_demand'] - $a['current_stock']));
+
+        return $predictions[0] ?? null;
+    }
 }

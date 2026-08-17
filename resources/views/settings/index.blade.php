@@ -271,6 +271,71 @@
             </form>
         </div>
 
+        {{-- Pemantauan & Kontrol Shift Kasir --}}
+        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-100">
+            <div class="mb-6 flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900">Pemantauan & Kontrol Shift Kasir</h2>
+                    <p class="text-sm text-slate-500">Pantau secara real-time status laci kasir (buka/tutup) di cabang dan kendalikan shift mereka.</p>
+                </div>
+                <span class="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">Operasional</span>
+            </div>
+
+            @if ($cashiers->isEmpty())
+                <p class="text-slate-500 text-sm">Tidak ada data kasir terdaftar untuk cabang Anda.</p>
+            @else
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($cashiers as $cashier)
+                        @php
+                            $activeReg = $cashier->cashRegisters->first();
+                        @endphp
+                        <div class="rounded-2xl border border-slate-200 p-5 flex flex-col justify-between hover:border-indigo-300 transition-colors">
+                            <div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm font-semibold text-slate-900">{{ $cashier->name }}</span>
+                                    @if ($activeReg)
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            BUKA
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800">
+                                            TUTUP
+                                        </span>
+                                    @endif
+                                </div>
+                                <p class="text-xs text-slate-500 mb-2">Cabang: <span class="font-medium text-slate-700">{{ $cashier->branch->name ?? 'N/A' }}</span></p>
+                                @if ($activeReg)
+                                    <div class="space-y-1 text-xs text-slate-600 bg-slate-50 rounded-xl p-3 mb-4">
+                                        <p>Buka sejak: <span class="font-medium text-slate-900">{{ $activeReg->opened_at->format('d M Y H:i') }}</span></p>
+                                        <p>Saldo Awal: <span class="font-medium text-slate-900">Rp {{ number_format($activeReg->opening_balance, 0, ',', '.') }}</span></p>
+                                    </div>
+                                @else
+                                    <p class="text-xs text-slate-400 italic mb-4">Laci register sedang tertutup (offline).</p>
+                                @endif
+                            </div>
+
+                            <div>
+                                @if ($activeReg)
+                                    <button type="button" 
+                                            onclick="openRemoteCloseModal({{ $activeReg->id }}, '{{ $cashier->name }}')"
+                                            class="w-full inline-flex items-center justify-center rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors">
+                                        Tutup Shift Kasir (Paksa)
+                                    </button>
+                                @else
+                                    <button type="button" 
+                                            onclick="openRemoteOpenModal({{ $cashier->id }}, '{{ $cashier->name }}', {{ $cashier->branch_id ?? 'null' }})"
+                                            class="w-full inline-flex items-center justify-center rounded-xl bg-indigo-50 px-3.5 py-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors">
+                                        Buka Shift Kasir
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
         {{-- Backup Database --}}
         <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-100">
             <div class="mb-4 flex items-center justify-between gap-4">
@@ -290,6 +355,58 @@
         </div>
     </div>
 
+    <!-- Remote Open Modal -->
+    <div id="remoteOpenModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/50 backdrop-blur-sm" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white px-6 pb-6 pt-6 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
+                <h3 class="text-lg font-semibold leading-6 text-slate-900 mb-4">Buka Shift Kasir: <span id="remoteOpenCashierName" class="text-indigo-600"></span></h3>
+                <form action="{{ route('cash.open') }}" method="POST" id="remoteOpenForm" class="space-y-4">
+                    @csrf
+                    <input type="hidden" name="user_id" id="remoteOpenUserId">
+                    <input type="hidden" name="branch_id" id="remoteOpenBranchId">
+                    <div>
+                        <label for="remote_opening_balance" class="block text-sm font-medium text-slate-700 mb-1.5">Saldo Awal</label>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-base text-slate-400">Rp</span>
+                            <input type="number" name="opening_balance" id="remote_opening_balance" required min="0" placeholder="0" class="block w-full rounded-xl border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-base shadow-sm focus:border-indigo-300 focus:bg-white focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-end pt-2">
+                        <button type="button" onclick="document.getElementById('remoteOpenModal').classList.add('hidden')" class="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">Batal</button>
+                        <button type="submit" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors">Buka Shift</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remote Close Modal -->
+    <div id="remoteCloseModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/50 backdrop-blur-sm" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white px-6 pb-6 pt-6 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
+                <h3 class="text-lg font-semibold leading-6 text-slate-900 mb-4">Tutup Shift Kasir: <span id="remoteCloseCashierName" class="text-rose-600"></span></h3>
+                <form action="" method="POST" id="remoteCloseForm" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label for="remote_closing_balance" class="block text-sm font-medium text-slate-700 mb-1.5">Saldo Akhir (Fisik)</label>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-base text-slate-400">Rp</span>
+                            <input type="number" name="closing_balance" id="remote_closing_balance" required min="0" placeholder="0" class="block w-full rounded-xl border-slate-200 bg-white py-3 pl-11 pr-4 text-base shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="remote_note_close" class="block text-sm font-medium text-slate-700 mb-1.5">Catatan <span class="text-slate-400 font-normal">(Opsional)</span></label>
+                        <textarea name="note" id="remote_note_close" rows="3" placeholder="Catatan penutupan..." class="block w-full rounded-xl border-slate-200 bg-white py-3 px-4 text-base shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                    </div>
+                    <div class="flex gap-3 justify-end pt-2">
+                        <button type="button" onclick="document.getElementById('remoteCloseModal').classList.add('hidden')" class="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">Batal</button>
+                        <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition-colors">Tutup Shift</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     @push('scripts')
         <script>
             document.querySelectorAll('.preset-button').forEach(button => {
@@ -298,6 +415,20 @@
                     document.getElementById('store_close_time').value = this.dataset.close;
                 });
             });
+
+            function openRemoteOpenModal(userId, name, branchId) {
+                document.getElementById('remoteOpenUserId').value = userId;
+                document.getElementById('remoteOpenBranchId').value = branchId;
+                document.getElementById('remoteOpenCashierName').innerText = name;
+                document.getElementById('remoteOpenModal').classList.remove('hidden');
+            }
+
+            function openRemoteCloseModal(registerId, name) {
+                const form = document.getElementById('remoteCloseForm');
+                form.action = `/cash/${registerId}/close`;
+                document.getElementById('remoteCloseCashierName').innerText = name;
+                document.getElementById('remoteCloseModal').classList.remove('hidden');
+            }
         </script>
     @endpush
 </x-layouts.app>

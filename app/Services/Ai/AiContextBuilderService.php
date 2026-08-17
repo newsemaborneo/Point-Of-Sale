@@ -212,27 +212,51 @@ class AiContextBuilderService
                        "  * Stok Tingkat Aman: {$stockSummary['healthy_stock_count']} produk\n" .
                        "  * Stok Menipis/Di bawah Batas: {$stockSummary['low_stock_count']} produk\n" .
                        "  * Stok Habis (0): {$stockSummary['out_of_stock_count']} produk\n" .
-                       "- Detail Stok Kritis:\n{$criticalStockFormatted}\n\n" .
+                       "- Detail Stok Kritis:\n{$criticalStockFormatted}\n\n";
 
-                       "METRIK PENJUALAN HARI INI (CABANG: " . ($isAdminOrSupervisor ? 'Semua Cabang' : $sanitizedBranchName) . "):\n" .
+            // Tambahan Konteks Prediktif & Bundling
+            $predictive = $this->inventoryAnalytics->getPredictiveRestocking($userBranchId, $isAdminOrSupervisor);
+            if ($predictive) {
+                $context .= "- Prediksi Lonjakan Permintaan:\n  * " . strip_tags($predictive['product']->name) . " diprediksi butuh {$predictive['predicted_demand']} unit dalam 3 hari ke depan (stok saat ini {$predictive['current_stock']}).\n\n";
+            }
+            $bundles = $this->salesAnalytics->getBundlingRecommendations(2, $userBranchId, $isAdminOrSupervisor);
+            if (!empty($bundles)) {
+                $context .= "- Rekomendasi Bundling Produk (Sering dibeli bersamaan):\n";
+                foreach ($bundles as $bundle) {
+                    $context .= "  * " . strip_tags($bundle['main_product']->name) . " + " . strip_tags($bundle['companion_product']->name) . "\n";
+                }
+                $context .= "\n";
+            }
+
+            $context .= "METRIK PENJUALAN HARI INI (CABANG: " . ($isAdminOrSupervisor ? 'Semua Cabang' : $sanitizedBranchName) . "):\n" .
                        "- Omset Hari Ini: Rp " . number_format($salesMetrics['total_revenue'], 0, ',', '.') . "\n" .
                        "- Jumlah Transaksi Hari Ini: {$salesMetrics['total_transactions']}\n" .
                        "- Pertumbuhan dibanding kemarin: " . ($salesMetrics['revenue_growth_percent'] >= 0 ? '+' : '') . "{$salesMetrics['revenue_growth_percent']}%\n" .
                        "- Produk Terlaris Hari Ini:\n{$bestSellersFormatted}\n\n";
 
             // Peak Hours Today
-            $peakHours = \App\Models\Sale::where('status', 'completed')
+            $salesToday = \App\Models\Sale::where('status', 'completed')
                 ->whereDate('created_at', now()->toDateString())
                 ->when(!$isAdminOrSupervisor && $userBranchId, fn($q) => $q->where('branch_id', $userBranchId))
-                ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('COUNT(*) as total_count'), DB::raw('SUM(grand_total) as total_revenue'))
-                ->groupBy('hour')
-                ->orderByDesc('total_count')
-                ->limit(3)
-                ->get()
-                ->map(fn($h) => "  * Jam " . str_pad($h->hour, 2, '0', STR_PAD_LEFT) . ":00 - " . str_pad($h->hour, 2, '0', STR_PAD_LEFT) . ":59 ({$h->total_count} transaksi, Rp " . number_format($h->total_revenue, 0, ',', '.') . ")")
-                ->implode("\n");
-            if (empty($peakHours)) {
+                ->get();
+
+            if ($salesToday->isEmpty()) {
                 $peakHours = "  * Belum ada data jam sibuk hari ini";
+            } else {
+                $peakHoursGroups = $salesToday->groupBy(function($s) {
+                    return $s->created_at->format('H');
+                })->map(function($group) {
+                    return [
+                        'count' => $group->count(),
+                        'revenue' => $group->sum('grand_total')
+                    ];
+                })->sortByDesc('count')->take(3);
+
+                $peakHoursArray = [];
+                foreach ($peakHoursGroups as $hour => $data) {
+                    $peakHoursArray[] = "  * Jam {$hour}:00 - {$hour}:59 ({$data['count']} transaksi, Rp " . number_format($data['revenue'], 0, ',', '.') . ")";
+                }
+                $peakHours = implode("\n", $peakHoursArray);
             }
             $context .= "JAM SIBUK (PEAK HOURS) HARI INI:\n{$peakHours}\n\n";
 
@@ -292,6 +316,128 @@ class AiContextBuilderService
 
                        "AKTIVITAS TERBARU SISTEM (5 TERAKHIR):\n{$recentLogsFormatted}\n" .
                        "==================================================\n";
+
+            // ── SALES FORECAST: Next Month Prediction ──────────────────────
+            // Ambil data 3 bulan terakhir untuk regresi linear sederhana
+            $monthlyRevenues = [];
+            for ($i = 2; $i >= 0; $i--) {
+                $mStart = now()->subMonths($i)->startOfMonth();
+                $mEnd   = now()->subMonths($i)->endOfMonth();
+                $rev    = \App\Models\Sale::where('status', 'completed')
+                    ->whereBetween('created_at', [$mStart, $mEnd])
+                    ->when(!$isAdminOrSupervisor && $userBranchId, fn($q) => $q->where('branch_id', $userBranchId))
+                    ->sum('grand_total');
+                $monthlyRevenues[] = [
+                    'month' => $mStart->translatedFormat('F Y'),
+                    'revenue' => $rev,
+                ];
+            }
+
+            // Hitung prediksi bulan depan dengan rata-rata bergerak tertimbang (weight: 1, 2, 3)
+            $weights   = [1, 2, 3];
+            $weightSum = array_sum($weights);
+            $weightedRev = 0;
+            foreach ($monthlyRevenues as $idx => $m) {
+                $weightedRev += $m['revenue'] * $weights[$idx];
+            }
+            $predictedNextMonthRevenue = $weightSum > 0 ? round($weightedRev / $weightSum) : 0;
+
+            // Hitung tren (naik/turun) berdasarkan 3 bulan
+            $revsOnly = array_column($monthlyRevenues, 'revenue');
+            $trendChange = (count($revsOnly) >= 2 && $revsOnly[0] > 0)
+                ? round((($revsOnly[2] - $revsOnly[0]) / $revsOnly[0]) * 100, 1)
+                : 0;
+            $trendLabel = $trendChange >= 0 ? "naik {$trendChange}%" : "turun " . abs($trendChange) . "%";
+
+            $historicalFormatted = implode("\n", array_map(
+                fn($m) => "  * {$m['month']}: Rp " . number_format($m['revenue'], 0, ',', '.'),
+                $monthlyRevenues
+            ));
+            $nextMonthLabel = now()->addMonth()->translatedFormat('F Y');
+
+            $context .= "\n==================================================\n" .
+                        "PREDIKSI & FORECAST BISNIS\n" .
+                        "==================================================\n" .
+                        "PREDIKSI PENJUALAN BULAN DEPAN ({$nextMonthLabel}):\n" .
+                        "- Data historis 3 bulan terakhir:\n{$historicalFormatted}\n" .
+                        "- Tren 3 bulan: {$trendLabel}\n" .
+                        "- Prediksi omset bulan depan: Rp " . number_format($predictedNextMonthRevenue, 0, ',', '.') . "\n" .
+                        "  (Metode: Rata-rata bergerak tertimbang (WMA 3 bulan), bobot bulan terbaru lebih tinggi)\n\n";
+
+            // ── STOCK FORECAST: Per-product stock depletion prediction ──────
+            // Stok produk ada di tabel product_stocks, bukan kolom di products
+            $thirtyDaysAgo2 = now()->subDays(30);
+
+            $productStockForecast = DB::table('products')
+                ->join('product_stocks', 'products.id', '=', 'product_stocks.product_id')
+                ->select(
+                    'products.id',
+                    'products.name',
+                    DB::raw('SUM(product_stocks.quantity) as total_stock'),
+                    DB::raw('(SELECT COALESCE(SUM(si.quantity), 0)
+                               FROM sale_items si
+                               INNER JOIN sales s ON si.sale_id = s.id
+                               WHERE s.status = \'completed\'
+                                 AND s.created_at >= \'' . $thirtyDaysAgo2->toDateTimeString() . '\'
+                                 ' . (!$isAdminOrSupervisor && $userBranchId ? 'AND s.branch_id = ' . (int) $userBranchId : '') . '
+                                 AND si.product_id = products.id) as sold_last_30d')
+                )
+                ->groupBy('products.id', 'products.name')
+                ->having('total_stock', '>', 0)
+                ->orderByDesc('total_stock')
+                ->limit(10)
+                ->get();
+
+            $stockForecastFormatted = '';
+            foreach ($productStockForecast as $prod) {
+                $sold30 = $prod->sold_last_30d ?? 0;
+                $avgDailySales = $sold30 > 0 ? $sold30 / 30 : 0;
+
+                if ($avgDailySales > 0) {
+                    $daysUntilEmpty = floor($prod->total_stock / $avgDailySales);
+                    $estimatedEmptyDate = now()->addDays($daysUntilEmpty)->translatedFormat('d F Y');
+                    $forecastNextMonth  = round($avgDailySales * 30);
+                    $status = $daysUntilEmpty <= 7 ? '🔴 KRITIS' : ($daysUntilEmpty <= 30 ? '🟡 PERLU PERHATIAN' : '🟢 AMAN');
+                    $stockForecastFormatted .= "  * " . strip_tags($prod->name) .
+                        " | Stok: {$prod->total_stock} unit" .
+                        " | Rata jual/hari: " . round($avgDailySales, 1) . " unit" .
+                        " | Prediksi habis: ~{$daysUntilEmpty} hari ({$estimatedEmptyDate})" .
+                        " | Prediksi terjual bulan depan: ~{$forecastNextMonth} unit" .
+                        " | Status: {$status}\n";
+                } else {
+                    $stockForecastFormatted .= "  * " . strip_tags($prod->name) .
+                        " | Stok: {$prod->total_stock} unit | Tidak ada penjualan 30 hari terakhir (Dead Stock)\n";
+                }
+            }
+
+            if (empty(trim($stockForecastFormatted))) {
+                $stockForecastFormatted = "  * Tidak ada data produk dengan stok tersedia\n";
+            }
+
+            $context .= "PREDIKSI STOK PRODUK (BERDASARKAN RATA-RATA PENJUALAN 30 HARI TERAKHIR):\n" .
+                        $stockForecastFormatted .
+                        "\n(Catatan: Prediksi di atas didasarkan pada rata-rata penjualan harian 30 hari terakhir. " .
+                        "Faktor eksternal seperti promosi, musim, atau perubahan pasar belum diperhitungkan.)\n" .
+                        "==================================================\n";
+
+            // 11. Knowledge Base (SOP & Manuals)
+            $kbPath = base_path('docs/knowledge');
+            $kbContext = "";
+            if (is_dir($kbPath)) {
+                $files = ['printer_kasir.md', 'kebijakan_retur.md', 'kontrak_supplier.md'];
+                foreach ($files as $file) {
+                    $filePath = $kbPath . '/' . $file;
+                    if (file_exists($filePath)) {
+                        $content = file_get_contents($filePath);
+                        $kbContext .= "DOKUMEN: {$file}\n{$content}\n---\n";
+                    }
+                }
+            }
+            if (!empty($kbContext)) {
+                $context .= "PANDUAN OPERASIONAL & SOP RESMI TOKO (KNOWLEDGE BASE):\n" .
+                            $kbContext .
+                            "==================================================\n";
+            }
 
             return $context;
         });

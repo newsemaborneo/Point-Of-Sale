@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SettingController extends Controller
 {
@@ -20,7 +21,13 @@ class SettingController extends Controller
             'close_time' => Setting::get('store_close_time', '21:00'),
         ];
 
-        return view('settings.index', compact('settings', 'storeLogo', 'storeHours'));
+        $user = Auth::user();
+        $cashiers = \App\Models\User::whereHas('role', fn($q) => $q->where('slug', 'cashier'))
+            ->when(!$user->hasRole('admin') && $user->branch_id, fn($q) => $q->where('branch_id', $user->branch_id))
+            ->with(['branch', 'cashRegisters' => fn($q) => $q->where('status', 'open')])
+            ->get();
+
+        return view('settings.index', compact('settings', 'storeLogo', 'storeHours', 'cashiers'));
     }
 
     public function update(Request $request)

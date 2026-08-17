@@ -116,9 +116,38 @@ class DashboardInsightService
             ];
         }
 
+        // 4. Best Seller Dominance Insight
+        $bestSellers = $this->salesAnalytics->getBestSellers(1, $branchId, $isAdminOrSupervisor);
+        if ($bestSellers->count() > 0) {
+            $topProduct = $bestSellers->first();
+            $insights[] = [
+                'title' => "Produk {$topProduct->product->name} mendominasi penjualan",
+                'summary' => "Produk ini menjadi kontributor utama hari ini dengan total {$topProduct->total_qty} unit terjual, menghasilkan Rp " . number_format($topProduct->total_sales, 0, ',', '.') . ".",
+                'severity' => 'positive',
+                'badge' => 'Positive',
+                'meta' => 'Produk Terlaris',
+                'trend' => "Top #1",
+            ];
+        }
+
+        // 5. Inventory Overview Insight
+        $invHealth = $this->inventoryAnalytics->getInventoryHealthSummary($branchId, $isAdminOrSupervisor);
+        $outOfStock = $invHealth['out_of_stock_count'];
+        $lowStock = $invHealth['low_stock_count'];
+        if ($outOfStock > 0 || $lowStock > 0) {
+            $insights[] = [
+                'title' => "Perhatian: {$outOfStock} produk kosong, {$lowStock} menipis",
+                'summary' => "Dari total {$invHealth['total_active_products']} produk aktif, sebagian memerlukan perhatian segera untuk mencegah hilangnya potensi penjualan.",
+                'severity' => 'warning',
+                'badge' => 'Warning',
+                'meta' => 'Status Inventaris',
+                'trend' => "Action Req",
+            ];
+        }
+
         // Gemini AI Enhancement
         if ($this->gemini->isConfigured()) {
-            $prompt = "Berikut adalah data insight bisnis hari ini:\n" . json_encode($insights, JSON_PRETTY_PRINT) . "\n\nTolong tulis ulang nilai dari key 'summary' pada masing-masing item di atas agar terdengar lebih natural, ramah, dan profesional dalam Bahasa Indonesia. Kembalikan format JSON yang sama persis strukturnya tanpa teks pengantar apapun.";
+            $prompt = "Berikut adalah data insight bisnis hari ini:\n" . json_encode($insights, JSON_PRETTY_PRINT) . "\n\nTolong tulis ulang nilai dari key 'summary' pada masing-masing item di atas agar terdengar lebih natural, ramah, dan profesional dalam Bahasa Indonesia. Kamu HANYA BOLEH mengembalikan format JSON yang sama persis strukturnya tanpa teks pengantar apapun.";
             
             $result = $this->gemini->generate($prompt, "Kamu adalah analis bisnis AI senior yang profesional.");
             if ($result) {
@@ -211,9 +240,62 @@ class DashboardInsightService
             ];
         }
 
+        // 4. AOV Boost Recommendation
+        $aov = $salesMetrics['avg_transaction_value'] ?? 0;
+        if ($transactions > 0 && $aov < 50000) {
+            $recommendations[] = [
+                'title' => "Tingkatkan nilai rata-rata transaksi (AOV)",
+                'priority' => 'Medium',
+                'confidence' => 82,
+                'summary' => "Rata-rata transaksi saat ini hanya Rp " . number_format($aov, 0, ',', '.') . ". Latih staf kasir untuk menawarkan produk pelengkap (cross-selling) di meja kasir.",
+                'impact' => 'Menaikkan basket size',
+            ];
+        }
+
+        // 5. Inventory Audit Recommendation
+        $invHealth = $this->inventoryAnalytics->getInventoryHealthSummary($branchId, $isAdminOrSupervisor);
+        if ($invHealth['out_of_stock_count'] > 0) {
+            $recommendations[] = [
+                'title' => "Lakukan audit stok opname segera",
+                'priority' => 'High',
+                'confidence' => 95,
+                'summary' => "Terdapat {$invHealth['out_of_stock_count']} produk yang tercatat kosong. Segera verifikasi fisik untuk memastikan tidak ada selisih stok (shrinkage) dan buat Purchase Order jika benar kosong.",
+                'impact' => 'Akurasi data inventaris',
+            ];
+        }
+
+        // 6. Bundling Recommendation (Market Basket Analysis)
+        $bundles = $this->salesAnalytics->getBundlingRecommendations(1, $branchId, $isAdminOrSupervisor);
+        if (!empty($bundles)) {
+            $bundle = $bundles[0];
+            $mainProduct = $bundle['main_product']->name;
+            $companionProduct = $bundle['companion_product']->name;
+            $recommendations[] = [
+                'title' => "Promo Bundling: {$mainProduct} + {$companionProduct}",
+                'priority' => 'Medium',
+                'confidence' => 88,
+                'summary' => "Pelanggan yang membeli {$mainProduct} sangat sering membeli {$companionProduct} bersamaan. Tawarkan diskon kecil untuk pembelian paket ini guna meningkatkan volume.",
+                'impact' => 'Peningkatan konversi up-sell',
+            ];
+        }
+
+        // 7. Predictive Restocking
+        $predictive = $this->inventoryAnalytics->getPredictiveRestocking($branchId, $isAdminOrSupervisor);
+        if ($predictive) {
+            $prodName = $predictive['product']->name;
+            $spikeText = $predictive['is_weekend_spike'] ? 'menjelang akhir pekan' : 'beberapa hari ke depan';
+            $recommendations[] = [
+                'title' => "Predictive Restock: Siapkan {$prodName}",
+                'priority' => 'High',
+                'confidence' => 91,
+                'summary' => "Permintaan {$prodName} diprediksi melonjak {$spikeText}. Stok saat ini ({$predictive['current_stock']} unit) tidak akan cukup untuk memenuhi proyeksi permintaan ({$predictive['predicted_demand']} unit). Segera pesan sebelum habis.",
+                'impact' => 'Mencegah loss sales ' . $spikeText,
+            ];
+        }
+
         // Gemini AI Enhancement
         if ($this->gemini->isConfigured()) {
-            $prompt = "Berikut adalah rekomendasi bisnis hari ini:\n" . json_encode($recommendations, JSON_PRETTY_PRINT) . "\n\nTolong tulis ulang nilai dari key 'summary' pada masing-masing item di atas agar terdengar lebih taktis, persuasif, dan profesional dalam Bahasa Indonesia. Kembalikan format JSON yang sama persis strukturnya tanpa teks pengantar apapun.";
+            $prompt = "Berikut adalah rekomendasi bisnis hari ini:\n" . json_encode($recommendations, JSON_PRETTY_PRINT) . "\n\nTolong tulis ulang nilai dari key 'summary' pada masing-masing item di atas agar terdengar lebih taktis, persuasif, dan profesional dalam Bahasa Indonesia. Kamu HANYA BOLEH mengembalikan format JSON yang sama persis strukturnya tanpa teks pengantar apapun.";
             
             $result = $this->gemini->generate($prompt, "Kamu adalah konsultan bisnis AI senior.");
             if ($result) {
@@ -244,7 +326,7 @@ class DashboardInsightService
         return [
             [
                 'role' => 'assistant', 
-                'text' => "Halo {$user->name}, saya asisten AI LAKUPOS. Hari ini di cabang {$branchName}, tercatat total omset Rp " . number_format($revenue, 0, ',', '.') . " dari {$transactions} transaksi yang selesai. Ada yang bisa saya bantu analisis hari ini?"
+                'text' => "Halo **{$user->name}**! 👋 Selamat datang di pusat bantuan cerdas AI LAKUPOS.\n\nSaya adalah asisten virtual yang selalu siap membantu Anda mengeksplorasi wawasan bisnis, menganalisis penjualan, mengawasi stok barang, dan menjawab berbagai pertanyaan operasional di cabang **{$branchName}**.\n\nApa yang ingin Anda ketahui hari ini?"
             ],
         ];
     }

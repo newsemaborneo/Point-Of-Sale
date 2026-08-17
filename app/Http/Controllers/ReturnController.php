@@ -12,6 +12,7 @@ use App\Models\Sale;
 use App\Models\SaleReturn;
 use App\Services\ReturnService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ReturnController extends Controller
 {
@@ -38,19 +39,22 @@ class ReturnController extends Controller
     {
         $returnsQuery = SaleReturn::with(['sale', 'sale.customer', 'user']);
 
+        $user = Auth::user();
+
         // Admin melihat semua return dari semua cabang
         // Supervisor melihat semua return dari cabang mereka
         // Kasir hanya melihat return yang mereka buat
-        if (auth()->user()->hasRole('admin')) {
+        if ($user->hasRole('admin')) {
             // Admin: semua return
-        } elseif (auth()->user()->hasRole('supervisor')) {
+        } elseif ($user->hasRole('supervisor')) {
             // Supervisor: return dari cabang yang sama
-            $returnsQuery->whereHas('sale', function ($query) {
-                $query->where('branch_id', auth()->user()->branch_id);
+            $returnsQuery->whereHas('sale', function ($query) use ($user) {
+                $query->where('branch_id', $user->branch_id);
             });
         } else {
+            
             // Kasir: hanya return yang mereka buat
-            $returnsQuery->where('user_id', auth()->id());
+            $returnsQuery->where('user_id', Auth::id());
         }
 
         $returns = $returnsQuery->latest()->paginate(20);
@@ -95,7 +99,7 @@ class ReturnController extends Controller
 
     public function destroySaleReturn(SaleReturn $saleReturn)
     {
-        $this->returnService->cancelSaleReturn($saleReturn, auth()->id());
+        $this->returnService->cancelSaleReturn($saleReturn, Auth::id());
         return redirect()->route('sale-returns.index')->with('success', 'Retur penjualan berhasil dibatalkan.');
     }
 
@@ -119,7 +123,7 @@ class ReturnController extends Controller
 
     public function destroyPurchaseReturn(PurchaseReturn $purchaseReturn)
     {
-        $this->returnService->cancelPurchaseReturn($purchaseReturn, auth()->id());
+        $this->returnService->cancelPurchaseReturn($purchaseReturn, Auth::id());
         return redirect()->route('purchase-returns.index')->with('success', 'Retur pembelian berhasil dibatalkan.');
     }
 }

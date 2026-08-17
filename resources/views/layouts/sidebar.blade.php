@@ -6,7 +6,7 @@
      @click="sidebarOpen = false"></div>
 
 <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-       class="fixed top-0 left-0 w-72 flex-shrink-0 h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 z-50 shadow-2xl"
+       class="fixed top-0 left-0 w-72 flex-shrink-0 h-[100dvh] bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 z-50 shadow-2xl"
        aria-label="Sidebar">
     <div class="h-16 flex items-center justify-between px-6 border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-sm">
         <div class="flex items-center gap-3">

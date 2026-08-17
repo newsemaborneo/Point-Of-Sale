@@ -248,4 +248,48 @@ class SalesAnalyticsService
             'chart'    => $salesChart,
         ];
     }
+    /**
+     * Market Basket Analysis (Bundling): Mencari pasangan produk yang sering dibeli bersamaan.
+     */
+    public function getBundlingRecommendations(int $limit = 1, ?int $userBranchId = null, bool $isAdminOrSupervisor = true)
+    {
+        // Ambil ID produk terlaris dulu
+        $bestSellers = $this->getBestSellers(3, $userBranchId, $isAdminOrSupervisor);
+        $recommendations = [];
+
+        foreach ($bestSellers as $bestSeller) {
+            $productId = $bestSeller->product_id;
+            
+            // Cari ID transaksi (sale_id) di mana produk ini dibeli
+            $saleQuery = SaleItem::select('sale_id')->where('product_id', $productId);
+            if (!$isAdminOrSupervisor && $userBranchId) {
+                $saleQuery->whereHas('sale', fn($q) => $q->where('branch_id', $userBranchId));
+            }
+            $saleIds = $saleQuery->pluck('sale_id');
+
+            if ($saleIds->isEmpty()) continue;
+
+            // Cari produk lain yang paling sering muncul di sale_id yang sama
+            $companion = SaleItem::selectRaw('product_id, COUNT(*) as frequency')
+                ->whereIn('sale_id', $saleIds)
+                ->where('product_id', '!=', $productId)
+                ->groupBy('product_id')
+                ->orderByDesc('frequency')
+                ->with('product')
+                ->first();
+
+            if ($companion && $companion->product) {
+                $recommendations[] = [
+                    'main_product' => $bestSeller->product,
+                    'main_qty' => $bestSeller->total_qty,
+                    'companion_product' => $companion->product,
+                    'frequency' => $companion->frequency
+                ];
+            }
+
+            if (count($recommendations) >= $limit) break;
+        }
+
+        return $recommendations;
+    }
 }

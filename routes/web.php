@@ -201,11 +201,15 @@ Route::middleware('auth')->group(function () {
 
     // ===== 12. MANAJEMEN KAS & SHIFT =====
     Route::prefix('cash')->name('cash.')->group(function () {
-        // Fitur Buka/Tutup Shift Kasir HANYA untuk role cashier
-        Route::middleware('role:cashier')->group(function () {
+        // Fitur Buka/Tutup Shift Kasir untuk kasir, admin, dan supervisor
+        Route::middleware('role:cashier,admin,supervisor')->group(function () {
             Route::get('/shift', [CashController::class, 'shiftIndex'])->name('shift');
             Route::post('/open', [CashController::class, 'openRegister'])->name('open');
             Route::post('/{cashRegister}/close', [CashController::class, 'closeRegister'])->name('close');
+        });
+
+        // Operasional transaksi kasir saja
+        Route::middleware('role:cashier')->group(function () {
             Route::post('/in', [CashController::class, 'cashIn'])->name('in');
             Route::post('/out', [CashController::class, 'cashOut'])->name('out');
             Route::get('/current-shift', [CashController::class, 'currentShift'])->name('current-shift');

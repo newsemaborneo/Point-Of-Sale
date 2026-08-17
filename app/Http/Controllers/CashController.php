@@ -36,23 +36,39 @@ class CashController extends Controller
             })
             ->paginate(20);
 
-        return view('cash.shift', compact('currentRegister', 'registers'));
+        // Load cashiers for admin and supervisor to monitor and control
+        $cashiers = [];
+        if ($user->hasRole('admin') || $user->hasRole('supervisor')) {
+            $cashiers = \App\Models\User::whereHas('role', fn($q) => $q->where('slug', 'cashier'))
+                ->when(!$user->hasRole('admin') && $user->branch_id, fn($q) => $q->where('branch_id', $user->branch_id))
+                ->with(['branch', 'cashRegisters' => fn($q) => $q->where('status', 'open')])
+                ->get();
+        }
+
+        return view('cash.shift', compact('currentRegister', 'registers', 'cashiers'));
     }
 
     public function openRegister(OpenCashRegisterRequest $request)
     {
         try {
-            $register = $this->cashRegisterService->openRegister($request->user(), $request->validated());
+            $user = $request->user();
+            $targetUser = $user;
+
+            if ($request->filled('user_id') && ($user->hasRole('admin') || $user->hasRole('supervisor'))) {
+                $targetUser = \App\Models\User::findOrFail($request->user_id);
+            }
+
+            $register = $this->cashRegisterService->openRegister($targetUser, $request->validated());
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'success'     => true,
-                    'message'     => 'Shift kasir berhasil dibuka. Selamat bertugas!',
+                    'message'     => 'Shift kasir berhasil dibuka.',
                     'register_id' => $register->id,
                 ], 200);
             }
 
-            return redirect()->route('cash.shift')->with('success', 'Shift kasir berhasil dibuka. Selamat bertugas!');
+            return redirect()->route('cash.shift')->with('success', 'Shift kasir berhasil dibuka.');
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);

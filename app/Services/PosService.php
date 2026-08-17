@@ -46,6 +46,8 @@ class PosService
         $productsJson = $products->map(fn($p) => [
             'id'          => $p->id,
             'name'        => $p->name,
+            'barcode'     => $p->barcode,
+            'sku'         => $p->sku,
             'price'       => (float) $p->sale_price,
             'stock'       => (int) $p->stockInWarehouse($warehouseId),
             'photo'       => $p->photo ?? null,
